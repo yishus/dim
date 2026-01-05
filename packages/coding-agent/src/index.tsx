@@ -48,38 +48,40 @@ function App() {
     if (popOverVisible) {
       if (key.name === "down") {
         selectRef.current?.moveDown();
+        return;
       }
       if (key.name === "up") {
         selectRef.current?.moveUp();
-      }
-      if (
-        key.name === "backspace" &&
-        textareaRef.current?.plainText === "/" &&
-        popOverVisible
-      ) {
-        setPopOverVisible(false);
-      }
-
-      let currentInput = textareaRef.current?.plainText || "";
-      if (key.name === "backspace") {
-        currentInput = currentInput.slice(0, -1);
-      }
-      if (isPrintableASCII(key.sequence)) {
-        currentInput += key.sequence;
-      }
-      currentInput = currentInput.slice(1); // Remove the leading "/"
-      let filteredCommands = slashCommands;
-      if (currentInput.length > 0) {
-        filteredCommands = slashCommands.filter(({ name }) =>
-          name.includes(currentInput),
-        );
-      }
-      setAvailableCommands(filteredCommands);
-    } else {
-      if (key.name === "/" && textareaRef.current?.plainText.length === 0) {
-        setPopOverVisible(true);
+        return;
       }
     }
+
+    let currentInput = textareaRef.current?.plainText || "";
+    if (key.name === "backspace") {
+      currentInput = currentInput.slice(0, -1);
+    }
+    if (isPrintableASCII(key.sequence)) {
+      currentInput += key.sequence;
+    }
+
+    if (
+      popOverVisible &&
+      (currentInput.length == 0 || currentInput[0] !== "/")
+    ) {
+      setPopOverVisible(false);
+      return;
+    }
+
+    const queryInput = currentInput.slice(1); // Remove the leading "/"
+    let filteredCommands = slashCommands;
+    if (queryInput.length > 0) {
+      filteredCommands = slashCommands.filter(({ name }) =>
+        name.includes(queryInput),
+      );
+    }
+    setAvailableCommands(filteredCommands);
+
+    setPopOverVisible(currentInput[0] === "/" && filteredCommands.length > 0);
   });
 
   const handleSubmit = () => {
