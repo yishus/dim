@@ -2,12 +2,12 @@ import { useState } from "react";
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 
-import { createEventBus } from "./event-bus";
+import { EventBus } from "./event-bus";
 import { Session } from "./session";
 import HomeScreen from "./components/HomeScreen";
 import CodingAgent from "./components/CodingAgent";
 
-const eventBus = createEventBus();
+const eventBus = new EventBus();
 const session = new Session({ eventBus });
 
 const App = () => {

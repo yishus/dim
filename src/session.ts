@@ -1,25 +1,22 @@
 import { AI } from "./ai";
-import { type EventBusController } from "./event-bus";
+import { EventBus } from "./event-bus";
 
 interface SessionOptions {
-  eventBus: EventBusController;
+  eventBus: EventBus;
 }
 
 export class Session {
   messages: Array<{ role: "user" | "assistant"; content: string }> = [];
-  eventBus: EventBusController;
+  eventBus: EventBus;
 
   constructor(options: SessionOptions) {
     this.eventBus = options.eventBus;
   }
 
-  prompt(input: string) {
-    (async () => {
-      const stream = AI.stream(input);
-      for await (const event of stream) {
-        console.log("Session stream event:", event);
-        this.eventBus.emit("sessionStream", event);
-      }
-    })();
+  async prompt(input: string) {
+    const stream = AI.stream(input);
+    for await (const event of stream) {
+      this.eventBus.emit("sessionStream", event);
+    }
   }
 }

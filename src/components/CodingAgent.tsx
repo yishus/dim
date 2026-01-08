@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { type EventBusController } from "../event-bus";
+import { EventBus } from "../event-bus";
 
 interface Props {
-  eventBus: EventBusController;
+  eventBus: EventBus;
 }
 
 const CodingAgent = (props: Props) => {
