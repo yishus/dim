@@ -5,23 +5,27 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages";
 
 import type { Message, MessageDelta } from "../ai";
+import type { Tool } from "../tools";
 
 export interface AnthropicStreamOptions {
   apiKey?: string;
+  tools?: Tool<any>[];
 }
 
 export namespace AnthropicProvider {
   export const stream = async function* (
     input: Message[],
-    option?: AnthropicStreamOptions,
+    options?: AnthropicStreamOptions,
   ) {
+    const { apiKey, tools } = options || {};
     const client = new Anthropic({
-      apiKey: option?.apiKey,
+      apiKey: apiKey,
     });
 
     const stream = await client.messages.create({
       max_tokens: 1024,
       messages: input.map(message_to_anthropic_message_param),
+      tools: tools?.map((tool) => tool.definition),
       model: "claude-sonnet-4-5-20250929",
       stream: true,
     });

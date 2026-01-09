@@ -1,6 +1,7 @@
 import { AnthropicProvider } from "./providers/anthropic";
 import { AuthStorage } from "./auth-storage";
 import { Provider } from "./providers";
+import tools from "./tools";
 
 interface MessageStartDelta {
   type: "message_start";
@@ -49,7 +50,10 @@ export namespace AI {
     switch (provider) {
       case Provider.Anthropic:
         const apiKey = authStorage.get(Provider.Anthropic);
-        const stream = AnthropicProvider.stream(input, { apiKey });
+        const stream = AnthropicProvider.stream(input, {
+          apiKey,
+          tools: Object.values(tools),
+        });
         return stream;
     }
   };

@@ -17,6 +17,7 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@opentui/core": "^0.1.57",
     "@opentui/react": "^0.1.57",
-    "react": "^19.1.1"
+    "react": "^19.1.1",
+    "typebox": "^1.0.76"
   }
 }

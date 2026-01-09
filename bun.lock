@@ -9,6 +9,7 @@
         "@opentui/core": "^0.1.57",
         "@opentui/react": "^0.1.57",
         "react": "^19.1.1",
+        "typebox": "^1.0.76",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -213,6 +214,8 @@
     "token-types": ["token-types@4.2.1", "", { "dependencies": { "@tokenizer/token": "^0.3.0", "ieee754": "^1.2.1" } }, "sha512-6udB24Q737UD/SDsKAHI9FCRP7Bqc9D/MQUV02ORQg5iskjtLJlZJNdN4kKtcdtwCeWIwIHDGaUsTsCCAa8sFQ=="],
 
     "ts-algebra": ["ts-algebra@2.0.0", "", {}, "sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw=="],
+
+    "typebox": ["typebox@1.0.76", "", {}, "sha512-BAMoCFfnoAJk45FwY9n2GTyQUpGuEq6R3VogsXED+qWZ46v2srKNO5/s/q49C9fpYfZL8UcoQHGIvTorfmVJ6g=="],
 
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 

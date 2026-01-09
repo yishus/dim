@@ -1,3 +1,3 @@
-import { EventEmitter } from "node:events";
+import { EventEmitter } from "events";
 
 export class EventBus extends EventEmitter {}
