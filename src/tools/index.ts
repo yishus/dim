@@ -2,6 +2,7 @@ import type { Static, TSchema } from "typebox";
 
 import read from "./read";
 import webFetch from "./web-fetch";
+import write from "./write";
 
 export interface Tool<T extends TSchema> {
   definition: {
@@ -12,4 +13,4 @@ export interface Tool<T extends TSchema> {
   callFunction: (args: Static<T>) => Promise<string>;
 }
 
-export default { read, webFetch };
+export default { read, webFetch, write };
