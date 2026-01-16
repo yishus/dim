@@ -1,11 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   Message as AnthropicMessage,
-  MessageParam,
+  MessageParam as AnthropicMessageParam,
   RawMessageStreamEvent,
 } from "@anthropic-ai/sdk/resources/messages";
 
-import type { Message, MessageDelta } from "../ai";
+import type { Message, MessageParam, MessageDelta } from "../ai";
 import type { Tool } from "../tools";
 
 export interface AnthropicStreamOptions {
@@ -15,7 +15,7 @@ export interface AnthropicStreamOptions {
 
 export namespace AnthropicProvider {
   export const prompt = async (
-    input: Message[],
+    input: MessageParam[],
     options?: AnthropicStreamOptions,
   ) => {
     const { apiKey, tools } = options || {};
@@ -25,7 +25,7 @@ export namespace AnthropicProvider {
 
     const response = await client.messages.create({
       max_tokens: 1024,
-      messages: input.map(message_to_anthropic_message_param),
+      messages: input.map(message_param_to_anthropic_message_param),
       tools: tools?.map((tool) => tool.definition),
       model: "claude-sonnet-4-5-20250929",
     });
@@ -34,7 +34,7 @@ export namespace AnthropicProvider {
   };
 
   export const stream = (
-    input: Message[],
+    input: MessageParam[],
     options?: AnthropicStreamOptions,
   ) => {
     const { apiKey, tools } = options || {};
@@ -44,7 +44,7 @@ export namespace AnthropicProvider {
 
     const stream = client.messages.stream({
       max_tokens: 1024,
-      messages: input.map(message_to_anthropic_message_param),
+      messages: input.map(message_param_to_anthropic_message_param),
       tools: tools?.map((tool) => tool.definition),
       model: "claude-sonnet-4-5-20250929",
     });
@@ -85,19 +85,21 @@ export namespace AnthropicProvider {
     };
   };
 
-  const message_to_anthropic_message_param = (
-    messge: Message,
-  ): MessageParam => {
+  const message_param_to_anthropic_message_param = (
+    messge: MessageParam,
+  ): AnthropicMessageParam => {
     return {
       role: messge.role,
       content: messge.content,
     };
   };
 
-  const anthropic_message_to_message = (message: AnthropicMessage) => {
+  const anthropic_message_to_message = (message: AnthropicMessage): Message => {
     return {
       role: message.role,
-      content: message.content.filter((c) => c.type === "text"),
+      content: message.content.filter(
+        (c) => c.type === "text" || c.type === "tool_use",
+      ),
     };
   };
 }

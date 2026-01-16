@@ -38,15 +38,34 @@ interface MessageTextContent {
   text: string;
 }
 
-type ContentBlock = MessageTextContent;
+interface MessageToolUseContent {
+  type: "tool_use";
+  id: string;
+  input: unknown;
+  name: string;
+}
+
+type ContentBlock = MessageTextContent | MessageToolUseContent;
 
 export interface Message {
   role: "user" | "assistant";
   content: ContentBlock[];
 }
 
+interface MessageToolResultContent {
+  type: "tool_result";
+  tool_use_id: string;
+  content: MessageTextContent[];
+  isError?: boolean;
+}
+
+export interface MessageParam {
+  role: "user" | "assistant";
+  content: Array<ContentBlock | MessageToolResultContent>;
+}
+
 export namespace AI {
-  export const prompt = async (provider: Provider, input: Message[]) => {
+  export const prompt = async (provider: Provider, input: MessageParam[]) => {
     const authStorage = new AuthStorage();
 
     switch (provider) {
@@ -60,7 +79,7 @@ export namespace AI {
     }
   };
 
-  export const stream = (provider: Provider, input: Message[]) => {
+  export const stream = (provider: Provider, input: MessageParam[]) => {
     const authStorage = new AuthStorage();
 
     switch (provider) {
