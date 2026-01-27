@@ -1,9 +1,14 @@
 import { AI, type Message, type MessageParam } from "./ai";
 import { Provider } from "./providers";
-import tools, { requestToolUsePermission, type ToolName } from "./tools";
+import tools, {
+  requestToolUsePermission,
+  toolUseDescription,
+  type ToolName,
+} from "./tools";
 
 interface StreamOptions {
   canUseTool?: (name: string, input: unknown) => Promise<boolean>;
+  emitMessage?: (message: string) => void;
 }
 
 export class Agent {
@@ -12,7 +17,7 @@ export class Agent {
   constructor(public systemPrompt?: string) {}
 
   async *stream(input?: string, options?: StreamOptions) {
-    const { canUseTool } = options || {};
+    const { canUseTool, emitMessage } = options || {};
     if (input) {
       this.context.push(this.nextMessage(input));
     }
@@ -32,7 +37,10 @@ export class Agent {
       if (message.content.every((c) => c.type !== "tool_use")) {
         break;
       }
-      await this.runToolCalls(message, canUseTool);
+      const success = await this.runToolCalls(message, canUseTool, emitMessage);
+      if (!success) {
+        break;
+      }
     }
   }
 
@@ -67,27 +75,52 @@ export class Agent {
   async runToolCalls(
     message: Message,
     canUseTool?: (name: string, input: unknown) => Promise<boolean>,
-  ) {
+    emitMessage?: (message: string) => void,
+  ): Promise<boolean> {
     const messageToProcess = message;
     let responses = [];
+    let interrupted = false;
     for (const content of messageToProcess.content) {
       if (content.type === "tool_use") {
         const { id, name, input } = content;
+        if (interrupted) {
+          responses.push({
+            id,
+            content: [
+              {
+                type: "text" as const,
+                text: "Tool use was interrupted.",
+              },
+            ],
+            isError: true,
+          });
+          continue;
+        }
         if (requestToolUsePermission[name as ToolName] && canUseTool) {
           const canUse = await canUseTool(name, input);
           if (!canUse) {
+            emitMessage?.(
+              `Interrupted: ${name} ${toolUseDescription(name as ToolName, input)}`,
+            );
             responses.push({
               id,
               content: [
-                { type: "text" as const, text: "Tool use not permitted." },
+                {
+                  type: "text" as const,
+                  text: "Tool use is not permitted.",
+                },
               ],
               isError: true,
             });
-            break;
+            interrupted = true;
+            continue;
           }
         }
         const tool = tools[name as ToolName];
         if (tool) {
+          emitMessage?.(
+            `${name} ${toolUseDescription(name as ToolName, input)}`,
+          );
           const result = await tool.callFunction(input as never);
           responses.push({
             id,
@@ -105,5 +138,7 @@ export class Agent {
         content: res.content,
       })),
     });
+
+    return interrupted === false;
   }
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { type SelectRenderable } from "@opentui/core";
 import type { SelectOption } from "@opentui/core";
 
-import { Session, type UIMessage } from "../session";
+import { Session, type ToolUseRequest, type UIMessage } from "../session";
 import ChatTextbox from "./ChatTextbox";
 import { useKeyboard } from "@opentui/react";
 
@@ -12,8 +12,12 @@ interface Props {
 }
 
 const toolUseRequestoptions: SelectOption[] = [
-  { name: "Yes", description: "Option 1 description", value: "yes" },
-  { name: "No", description: "Option 2 description", value: "no" },
+  { name: "Yes", description: "Allow agent to use tool", value: "yes" },
+  {
+    name: "No",
+    description: "Disallow agent's request to use tool",
+    value: "no",
+  },
 ];
 
 const CodingAgent = (props: Props) => {
@@ -22,15 +26,15 @@ const CodingAgent = (props: Props) => {
     { role: "user", text: userPrompt },
   ]);
   const [showToolUseRequest, setShowToolUseRequest] = useState(false);
-  const toolUseRequestRef = useRef<{ toolName: string } | null>(null);
+  const toolUseRequestRef = useRef<ToolUseRequest | null>(null);
   const selectRef = useRef<SelectRenderable>(null);
   const pendingApprovalRef = useRef<{
     resolve: (approved: boolean) => void;
   } | null>(null);
 
   useEffect(() => {
-    session.canUseToolHandler = async (toolName: string) => {
-      toolUseRequestRef.current = { toolName };
+    session.canUseToolHandler = async (request: ToolUseRequest) => {
+      toolUseRequestRef.current = request;
       setShowToolUseRequest(true);
 
       return new Promise<boolean>((resolve) => {
@@ -109,7 +113,7 @@ const CodingAgent = (props: Props) => {
           {messages.map(renderMessage)}
           {showToolUseRequest && (
             <>
-              <text>{toolUseRequestRef.current?.toolName}</text>
+              <text>{`${toolUseRequestRef.current?.toolName} ${toolUseRequestRef.current?.description}`}</text>
               <select
                 style={{ height: 6 }}
                 options={toolUseRequestoptions}
