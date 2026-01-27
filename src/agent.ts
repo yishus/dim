@@ -1,6 +1,6 @@
 import { AI, type Message, type MessageParam } from "./ai";
 import { Provider } from "./providers";
-import tools from "./tools";
+import tools, { requestToolUsePermission, type ToolName } from "./tools";
 
 interface StreamOptions {
   canUseTool?: (name: string, input: unknown) => Promise<boolean>;
@@ -70,38 +70,26 @@ export class Agent {
     for (const content of messageToProcess.content) {
       if (content.type === "tool_use") {
         const { id, name, input } = content;
-        switch (name) {
-          case "read":
-            const resRead = await tools.read.callFunction(
-              input as Parameters<typeof tools.read.callFunction>[0],
-            );
+        if (requestToolUsePermission[name as ToolName] && canUseTool) {
+          const canUse = await canUseTool(name, input);
+          if (!canUse) {
             responses.push({
               id,
-              content: [{ type: "text" as const, text: resRead }],
+              content: [
+                { type: "text" as const, text: "Tool use not permitted." },
+              ],
+              isError: true,
             });
             break;
-          case "webFetch":
-            if (canUseTool) {
-              const canUse = await canUseTool(name, input);
-              if (!canUse) {
-                responses.push({
-                  id,
-                  content: [
-                    { type: "text" as const, text: "Tool use not permitted." },
-                  ],
-                  isError: true,
-                });
-                break;
-              }
-            }
-            const resWebFetch = await tools.webFetch.callFunction(
-              input as Parameters<typeof tools.webFetch.callFunction>[0],
-            );
-            responses.push({
-              id,
-              content: [{ type: "text" as const, text: resWebFetch }],
-            });
-            break;
+          }
+        }
+        const tool = tools[name as ToolName];
+        if (tool) {
+          const result = await tool.callFunction(input as never);
+          responses.push({
+            id,
+            content: [{ type: "text" as const, text: result }],
+          });
         }
       }
     }

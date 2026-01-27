@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  type KeyBinding,
-  type SelectRenderable,
-  type TextareaRenderable,
-} from "@opentui/core";
+import { type SelectRenderable } from "@opentui/core";
 import type { SelectOption } from "@opentui/core";
 
 import { Session, type UIMessage } from "../session";

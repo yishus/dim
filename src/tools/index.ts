@@ -15,4 +15,16 @@ export interface Tool<T extends TSchema> {
   callFunction: (args: Static<T>) => Promise<string>;
 }
 
-export default { bash, edit, read, webFetch, write };
+const tools = { bash, edit, read, webFetch, write };
+
+export type ToolName = keyof typeof tools;
+
+export const requestToolUsePermission: Record<ToolName, boolean> = {
+  bash: true,
+  edit: true,
+  read: false,
+  webFetch: true,
+  write: true,
+};
+
+export default tools;
