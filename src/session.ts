@@ -6,6 +6,7 @@ import { type MessageDelta } from "./ai";
 import { Agent } from "./agent";
 import { toolUseDescription, type ToolInputMap, type ToolName } from "./tools";
 import { generateEditDiff } from "./helper";
+import { isErrnoException } from "./type_helper";
 
 export interface UIMessage {
   role: "user" | "assistant";
@@ -21,10 +22,36 @@ export interface ToolUseRequest {
 const SYSTEM_PROMPT_PATH = join(__dirname, "prompts/system_workflow.md");
 
 export class Session {
-  agent = new Agent(readFileSync(SYSTEM_PROMPT_PATH, "utf8"));
+  agent: Agent;
   eventEmitter = new EventEmitter();
   canUseToolHandler?: (request: ToolUseRequest) => Promise<boolean>;
   memory: { [key: string]: any } = {};
+
+  constructor() {
+    let systemReminderStart;
+    try {
+      const claudeMd = readFileSync(process.cwd() + "/CLAUDE.md", "utf8");
+      if (claudeMd) {
+        const startReminder = readFileSync(
+          join(__dirname, "prompts/system_reminder_start.md"),
+          "utf8",
+        );
+        systemReminderStart = startReminder.replace(
+          "${START_CONTEXT}",
+          claudeMd,
+        );
+      }
+    } catch (err: unknown) {
+      if (!isErrnoException(err) || err.code !== "ENOENT") {
+        throw err;
+      }
+    } finally {
+      this.agent = new Agent(
+        readFileSync(SYSTEM_PROMPT_PATH, "utf8"),
+        systemReminderStart,
+      );
+    }
+  }
 
   async prompt(input: string) {
     const stream = this.agent.stream(input, {

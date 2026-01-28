@@ -17,13 +17,29 @@ interface StreamOptions {
 export class Agent {
   private context: MessageParam[] = [];
 
-  constructor(public systemPrompt?: string) {}
+  constructor(
+    public systemPrompt?: string,
+    public systemReminderStart?: string,
+  ) {}
 
   async *stream(input?: string, options?: StreamOptions) {
     const { canUseTool, emitMessage, saveToSessionMemory } = options || {};
+    if (this.context.length === 0 && this.systemReminderStart) {
+      this.context.push({
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: this.systemReminderStart,
+          },
+        ],
+      });
+    }
+
     if (input) {
       this.context.push(this.nextMessage(input));
     }
+
     while (true) {
       const { fullMessage, streamText } = AI.stream(
         Provider.Anthropic,
