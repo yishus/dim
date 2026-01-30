@@ -1,12 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   type KeyBinding,
   type SelectRenderable,
   type TextareaRenderable,
 } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 import { isPrintableASCII } from "../helper";
+
+const execAsync = promisify(exec);
 
 const slashCommands = [
   { name: "/model", description: "Select AI model", value: "model" },
@@ -44,6 +48,12 @@ const ChatTextbox = (props: Props) => {
 
   const [popOverVisible, setPopOverVisible] = useState(false);
   const [availableCommands, setAvailableCommands] = useState(slashCommands);
+  const [fileSearchVisible, setFileSearchVisible] = useState(false);
+  const [availableFiles, setAvailableFiles] = useState<
+    Array<{ name: string; value: string }>
+  >([]);
+  const [currentAtQuery, setCurrentAtQuery] = useState("");
+  const fileSelectRef = useRef<SelectRenderable>(null);
 
   useKeyboard((key) => {
     if (popOverVisible) {
@@ -53,6 +63,17 @@ const ChatTextbox = (props: Props) => {
       }
       if (key.name === "up") {
         selectRef.current?.moveUp();
+        return;
+      }
+    }
+
+    if (fileSearchVisible) {
+      if (key.name === "down") {
+        fileSelectRef.current?.moveDown();
+        return;
+      }
+      if (key.name === "up") {
+        fileSelectRef.current?.moveUp();
         return;
       }
     }
@@ -73,7 +94,20 @@ const ChatTextbox = (props: Props) => {
       return;
     }
 
-    const queryInput = currentInput.slice(1); // Remove the leading "/"
+    const words = currentInput.split(/\s+/);
+    const lastWord = words[words.length - 1] || "";
+
+    if (lastWord.startsWith("@")) {
+      const query = lastWord.slice(1);
+      setCurrentAtQuery(query);
+      setFileSearchVisible(true);
+      setPopOverVisible(false);
+      return;
+    } else if (fileSearchVisible) {
+      setFileSearchVisible(false);
+    }
+
+    const queryInput = currentInput.slice(1);
     let filteredCommands = slashCommands;
     if (queryInput.length > 0) {
       filteredCommands = slashCommands.filter(({ name }) =>
@@ -85,15 +119,51 @@ const ChatTextbox = (props: Props) => {
     setPopOverVisible(currentInput[0] === "/" && filteredCommands.length > 0);
   });
 
+  useEffect(() => {
+    if (!fileSearchVisible) return;
+
+    const searchFiles = async () => {
+      try {
+        const { stdout } = await execAsync(
+          `git ls-files | fzf -f "${currentAtQuery}" | head -6`,
+          { cwd: process.cwd() },
+        );
+        const files = stdout
+          .trim()
+          .split("\n")
+          .filter((f) => f.length > 0)
+          .map((file) => ({
+            name: file,
+            value: file,
+          }));
+        setAvailableFiles(files);
+      } catch (error) {
+        setAvailableFiles([]);
+      }
+    };
+
+    searchFiles();
+  }, [fileSearchVisible, currentAtQuery]);
+
   const handleSubmit = () => {
+    const selectedFile = fileSelectRef.current?.getSelectedOption();
+    if (selectedFile) {
+      textareaRef.current?.deleteWordBackward();
+      textareaRef.current?.insertText(`@${selectedFile.value}`);
+      setFileSearchVisible(false);
+      return;
+    }
+
     const selectedOption = selectRef.current?.getSelectedOption();
     const submittedText = selectedOption?.value
       ? `/${selectedOption.value}`
       : textareaRef.current?.plainText || "";
+
     if (submittedText.length > 0) {
       onSubmit(submittedText);
       textareaRef.current?.clear();
       setPopOverVisible(false);
+      setFileSearchVisible(false);
     }
   };
 
@@ -112,6 +182,22 @@ const ChatTextbox = (props: Props) => {
             options={availableCommands}
             focused={false}
             ref={selectRef}
+          />
+        </box>
+      )}
+      {fileSearchVisible && availableFiles.length > 0 && (
+        <box
+          style={{
+            border: true,
+            height: 8,
+            width: "100%",
+          }}
+        >
+          <select
+            style={{ height: 6 }}
+            options={availableFiles}
+            focused={false}
+            ref={fileSelectRef}
           />
         </box>
       )}
