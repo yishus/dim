@@ -1,10 +1,21 @@
-import { AnthropicProvider, type ModelId } from "./providers/anthropic";
+import {
+  AnthropicProvider,
+  type ModelId as AnthropicModelId,
+} from "./providers/anthropic";
+import { GoogleProvider, type GoogleModelId } from "./providers/google";
 import { AuthStorage } from "./auth-storage";
 import { Provider } from "./providers";
 import tools from "./tools";
 
-export type { ModelId } from "./providers/anthropic";
+export type { ModelId as AnthropicModelId } from "./providers/anthropic";
+export type { GoogleModelId } from "./providers/google";
 export { DEFAULT_MODEL, AVAILABLE_MODELS } from "./providers/anthropic";
+export {
+  DEFAULT_GOOGLE_MODEL,
+  AVAILABLE_GOOGLE_MODELS,
+} from "./providers/google";
+
+export type ModelId = AnthropicModelId | GoogleModelId;
 
 interface MessageStartDelta {
   type: "message_start";
@@ -43,7 +54,7 @@ interface MessageToolUseContent {
   name: string;
 }
 
-type ContentBlock = MessageTextContent | MessageToolUseContent;
+export type ContentBlock = MessageTextContent | MessageToolUseContent;
 
 export interface MessageResponse {
   message: Message;
@@ -79,14 +90,24 @@ export namespace AI {
     const authStorage = new AuthStorage();
 
     switch (provider) {
-      case Provider.Anthropic:
+      case Provider.Anthropic: {
         const apiKey = authStorage.get(Provider.Anthropic);
         const response = AnthropicProvider.prompt(input, {
           apiKey,
           tools: Object.values(tools),
-          model,
+          model: model as AnthropicModelId,
         });
         return response;
+      }
+      case Provider.Google: {
+        const apiKey = authStorage.get(Provider.Google);
+        const response = GoogleProvider.prompt(input, {
+          apiKey,
+          tools: Object.values(tools),
+          model: model as GoogleModelId,
+        });
+        return response;
+      }
     }
   };
 
@@ -99,15 +120,26 @@ export namespace AI {
     const authStorage = new AuthStorage();
 
     switch (provider) {
-      case Provider.Anthropic:
+      case Provider.Anthropic: {
         const apiKey = authStorage.get(Provider.Anthropic);
         const stream = AnthropicProvider.stream(input, {
           apiKey,
           systemPrompt,
           tools: Object.values(tools),
-          model,
+          model: model as AnthropicModelId,
         });
         return stream;
+      }
+      case Provider.Google: {
+        const apiKey = authStorage.get(Provider.Google);
+        const stream = GoogleProvider.stream(input, {
+          apiKey,
+          systemPrompt,
+          tools: Object.values(tools),
+          model: model as GoogleModelId,
+        });
+        return stream;
+      }
     }
   };
 }

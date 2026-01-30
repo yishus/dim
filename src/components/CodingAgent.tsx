@@ -5,7 +5,8 @@ import {
   type ToolUseRequest,
   type UIMessage,
   type ModelId,
-  AVAILABLE_MODELS,
+  ALL_MODELS,
+  Provider,
 } from "../session";
 import ChatTextbox from "./ChatTextbox";
 import Message from "./Message";
@@ -25,6 +26,7 @@ const CodingAgent = (props: Props) => {
   const [showToolUseRequest, setShowToolUseRequest] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [currentModel, setCurrentModel] = useState<ModelId>(session.getModel());
+  const [currentProvider, setCurrentProvider] = useState<Provider>(session.getProvider());
   const toolUseRequestRef = useRef<ToolUseRequest | null>(null);
   const pendingApprovalRef = useRef<{
     resolve: (approved: boolean) => void;
@@ -77,14 +79,16 @@ const CodingAgent = (props: Props) => {
     setShowToolUseRequest(false);
   };
 
-  const handleModelSelect = (model: ModelId) => {
-    session.setModel(model);
+  const handleModelSelect = (model: ModelId, provider: Provider) => {
+    session.setModel(model, provider);
     setCurrentModel(model);
-    const modelName =
-      AVAILABLE_MODELS.find((m) => m.id === model)?.name ?? model;
+    setCurrentProvider(provider);
+    const modelInfo = ALL_MODELS.find((m) => m.id === model);
+    const providerName = provider === Provider.Anthropic ? "Anthropic" : "Google";
+    const modelName = modelInfo?.name ?? model;
     setMessages((prev) => [
       ...prev,
-      { role: "assistant", text: `Model changed to ${modelName}` },
+      { role: "assistant", text: `Model changed to ${modelName} (${providerName})` },
     ]);
     setShowModelSelector(false);
   };
@@ -106,7 +110,9 @@ const CodingAgent = (props: Props) => {
   };
 
   const currentModelName =
-    AVAILABLE_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
+    ALL_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
+  const currentProviderName =
+    currentProvider === Provider.Anthropic ? "Anthropic" : "Google";
 
   return (
     <box style={{ flexDirection: "row", width: "100%", height: "100%" }}>
@@ -137,6 +143,7 @@ const CodingAgent = (props: Props) => {
         <ChatTextbox onSubmit={handleSubmit} minHeight={3} />
       </box>
       <box style={{ width: "25%", border: true, flexDirection: "column" }}>
+        <text>Provider: {currentProviderName}</text>
         <text>Model: {currentModelName}</text>
         <text>Tokens used: {tokenUsage}</text>
         <text>Cost: ${tokenCost.toFixed(6)}</text>

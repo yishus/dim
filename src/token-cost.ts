@@ -24,6 +24,15 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
     inputPerMillion: 0.8,
     outputPerMillion: 4.0,
   },
+  // Google Gemini models
+  "gemini-3-flash-preview": {
+    inputPerMillion: 0,
+    outputPerMillion: 0,
+  },
+  "gemini-2.5-pro": {
+    inputPerMillion: 0,
+    outputPerMillion: 0,
+  },
 };
 
 export interface TokenCost {

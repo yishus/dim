@@ -58,8 +58,6 @@ export namespace AnthropicProvider {
       apiKey: apiKey,
     });
 
-    console.log(model);
-
     const stream = client.messages.stream({
       max_tokens: 16384,
       messages: input.map(message_param_to_anthropic_message_param),
@@ -116,7 +114,6 @@ export namespace AnthropicProvider {
   const anthropic_message_to_message_response = (
     message: AnthropicMessage,
   ): MessageResponse => {
-    console.log(message);
     return {
       message: {
         role: message.role,

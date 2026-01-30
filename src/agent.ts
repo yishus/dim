@@ -19,6 +19,7 @@ export class Agent {
   private context: MessageParam[] = [];
   totalTokensUsed = 0;
   model: ModelId = DEFAULT_MODEL;
+  provider: Provider = Provider.Anthropic;
 
   constructor(
     public systemPrompt?: string,
@@ -46,7 +47,7 @@ export class Agent {
 
     while (true) {
       const { fullMessage, streamText } = AI.stream(
-        Provider.Anthropic,
+        this.provider,
         this.context,
         this.systemPrompt,
         this.model,
@@ -77,7 +78,7 @@ export class Agent {
 
   async prompt(input: string) {
     const { message } = await AI.prompt(
-      Provider.Anthropic,
+      this.provider,
       [...this.context, this.nextMessage(input)],
       this.model,
     );

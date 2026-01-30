@@ -50,7 +50,7 @@ const ChatTextbox = (props: Props) => {
   const [availableCommands, setAvailableCommands] = useState(slashCommands);
   const [fileSearchVisible, setFileSearchVisible] = useState(false);
   const [availableFiles, setAvailableFiles] = useState<
-    Array<{ name: string; value: string }>
+    Array<{ name: string; value: string; description: string }>
   >([]);
   const [currentAtQuery, setCurrentAtQuery] = useState("");
   const fileSelectRef = useRef<SelectRenderable>(null);
@@ -135,6 +135,7 @@ const ChatTextbox = (props: Props) => {
           .map((file) => ({
             name: file,
             value: file,
+            description: "",
           }));
         setAvailableFiles(files);
       } catch (error) {

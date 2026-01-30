@@ -1,17 +1,17 @@
 import { useRef } from "react";
 import type { SelectRenderable, SelectOption } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
-import { AVAILABLE_MODELS, type ModelId } from "../session";
+import { ALL_MODELS, Provider, type ModelId } from "../session";
 
-const modelOptions: SelectOption[] = AVAILABLE_MODELS.map((m) => ({
-  name: m.name,
+const modelOptions: SelectOption[] = ALL_MODELS.map((m) => ({
+  name: `${m.name} (${m.provider === Provider.Anthropic ? "Anthropic" : "Google"})`,
   description: m.id,
-  value: m.id,
+  value: `${m.provider}:${m.id}`,
 }));
 
 interface Props {
   currentModel: ModelId;
-  onSelect: (model: ModelId) => void;
+  onSelect: (model: ModelId, provider: Provider) => void;
   onCancel: () => void;
 }
 
@@ -30,7 +30,8 @@ const ModelSelectorDialog = ({ currentModel, onSelect, onCancel }: Props) => {
     if (key.name === "return") {
       const selectedValue = selectRef.current?.getSelectedOption()?.value;
       if (selectedValue) {
-        onSelect(selectedValue as ModelId);
+        const [provider, model] = selectedValue.split(":");
+        onSelect(model as ModelId, provider as Provider);
       }
       return;
     }
@@ -40,7 +41,7 @@ const ModelSelectorDialog = ({ currentModel, onSelect, onCancel }: Props) => {
   });
 
   const currentModelName =
-    AVAILABLE_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
+    ALL_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
 
   return (
     <box style={{ border: true, padding: 1 }}>

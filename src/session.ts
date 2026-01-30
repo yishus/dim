@@ -2,15 +2,35 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import EventEmitter from "events";
 
-import { type MessageDelta, type ModelId, DEFAULT_MODEL, AVAILABLE_MODELS } from "./ai";
+import {
+  type MessageDelta,
+  type ModelId,
+  DEFAULT_MODEL,
+  AVAILABLE_MODELS,
+  DEFAULT_GOOGLE_MODEL,
+  AVAILABLE_GOOGLE_MODELS,
+} from "./ai";
 import { Agent } from "./agent";
+import { Provider } from "./providers";
 import { toolUseDescription, type ToolInputMap, type ToolName } from "./tools";
 import { generateEditDiff, generateWriteDiff } from "./helper";
 import { isErrnoException } from "./type-helper";
 import { TokenCostHelper } from "./token-cost";
 
 export type { ModelId };
-export { DEFAULT_MODEL, AVAILABLE_MODELS };
+export { Provider };
+export { DEFAULT_MODEL, AVAILABLE_MODELS, DEFAULT_GOOGLE_MODEL, AVAILABLE_GOOGLE_MODELS };
+
+export interface ProviderModel {
+  id: ModelId;
+  name: string;
+  provider: Provider;
+}
+
+export const ALL_MODELS: ProviderModel[] = [
+  ...AVAILABLE_MODELS.map((m) => ({ ...m, provider: Provider.Anthropic })),
+  ...AVAILABLE_GOOGLE_MODELS.map((m) => ({ ...m, provider: Provider.Google })),
+];
 
 export interface UIMessage {
   role: "user" | "assistant";
@@ -102,12 +122,23 @@ export class Session {
     });
   }
 
-  setModel(model: ModelId) {
+  setModel(model: ModelId, provider?: Provider) {
     this.agent.model = model;
+    if (provider) {
+      this.agent.provider = provider;
+    }
   }
 
   getModel(): ModelId {
     return this.agent.model;
+  }
+
+  setProvider(provider: Provider) {
+    this.agent.provider = provider;
+  }
+
+  getProvider(): Provider {
+    return this.agent.provider;
   }
 
   processDelta(delta: MessageDelta) {
