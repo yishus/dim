@@ -6,7 +6,7 @@ import { type MessageDelta } from "./ai";
 import { Agent } from "./agent";
 import { toolUseDescription, type ToolInputMap, type ToolName } from "./tools";
 import { generateEditDiff, generateWriteDiff } from "./helper";
-import { isErrnoException } from "./type_helper";
+import { isErrnoException } from "./type-helper";
 import { TokenCostHelper } from "./token-cost";
 
 export interface UIMessage {
