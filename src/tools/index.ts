@@ -25,11 +25,18 @@ export type ToolInputMap = {
 };
 
 // Typed call function that preserves the relationship
-export function callTool<T extends ToolName>(
+export async function callTool<T extends ToolName>(
   name: T,
   input: ToolInputMap[T],
 ): Promise<string> {
-  return tools[name].callFunction(input as never);
+  try {
+    return await tools[name].callFunction(input as never);
+  } catch (error) {
+    if (error instanceof Error) {
+      return `Error: ${error.message}`;
+    }
+    return "Error: Unknown error occurred";
+  }
 }
 
 export const requestToolUsePermission: Record<ToolName, boolean> = {
