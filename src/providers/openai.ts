@@ -217,7 +217,8 @@ export namespace OpenAIProvider {
         if (result.type === "tool_result") {
           items.push({
             type: "function_call_output",
-            call_id: result.tool_use_id || "",
+            // OpenAI always provides call_ids, but our generic type allows undefined for Google compatibility
+            call_id: result.tool_use_id ?? "",
             output: result.content.map((c) => c.text).join("\n"),
           });
         }
@@ -251,7 +252,8 @@ export namespace OpenAIProvider {
         if (toolUse.type === "tool_use") {
           items.push({
             type: "function_call",
-            call_id: toolUse.id || "",
+            // OpenAI always provides call_ids, but our generic type allows undefined for Google compatibility
+            call_id: toolUse.id ?? "",
             name: toolUse.name,
             arguments: JSON.stringify(toolUse.input),
           });

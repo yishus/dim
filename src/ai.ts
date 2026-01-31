@@ -23,62 +23,85 @@ export {
 
 export type ModelId = AnthropicModelId | GoogleModelId | OpenAIModelId;
 
-interface MessageStartDelta {
+// Stream delta types
+export interface MessageStartDelta {
   type: "message_start";
   role: "user" | "assistant";
 }
 
-interface TextUpdateDelta {
+export interface TextUpdateDelta {
   type: "text_update";
   text: string;
 }
 
-interface IgnoredDelta {
+export interface IgnoredDelta {
   type: "ignored";
 }
 
 export type MessageDelta = MessageStartDelta | TextUpdateDelta | IgnoredDelta;
 
-interface MessageTextContent {
+// Content block types
+export interface TextContent {
   type: "text";
   text: string;
-  thoughtSignature?: string;
+  /** Provider-specific metadata (e.g., Google's thinking signatures) */
+  metadata?: Record<string, unknown>;
 }
 
-interface MessageToolUseContent {
+export interface ToolUseContent {
   type: "tool_use";
+  /**
+   * Unique identifier for this tool use.
+   * - Anthropic: Always present
+   * - OpenAI: Always present (call_id)
+   * - Google: May be undefined; use `name` for correlation instead
+   */
   id?: string;
-  input: unknown;
+  /** Name of the tool being called */
   name: string;
-  thoughtSignature?: string;
+  /** Input arguments for the tool */
+  input: unknown;
+  /** Provider-specific metadata (e.g., Google's thinking signatures) */
+  metadata?: Record<string, unknown>;
 }
 
-export type ContentBlock = MessageTextContent | MessageToolUseContent;
-
-export interface MessageResponse {
-  message: Message;
-  usage: {
-    input_tokens: number;
-    output_tokens: number;
-  };
+export interface ToolResultContent {
+  type: "tool_result";
+  /**
+   * ID of the tool_use this is a result for.
+   * Should match the `id` from the corresponding ToolUseContent when available.
+   * For providers like Google that may not provide IDs, use `name` for correlation.
+   */
+  tool_use_id?: string;
+  /** Name of the tool - used for correlation when tool_use_id is unavailable */
+  name: string;
+  /** Result content */
+  content: TextContent[];
+  /** Whether the tool execution resulted in an error */
+  isError?: boolean;
 }
+
+export type ContentBlock = TextContent | ToolUseContent;
+export type MessageContent = ContentBlock | ToolResultContent;
 
 export interface Message {
   role: "user" | "assistant";
   content: ContentBlock[];
 }
 
-interface MessageToolResultContent {
-  type: "tool_result";
-  tool_use_id?: string;
-  name?: string;
-  content: MessageTextContent[];
-  isError?: boolean;
-}
-
 export interface MessageParam {
   role: "user" | "assistant";
-  content: Array<ContentBlock | MessageToolResultContent>;
+  content: MessageContent[];
+}
+
+export interface Usage {
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export interface MessageResponse {
+  message: Message;
+  usage: Usage;
 }
 
 export namespace AI {

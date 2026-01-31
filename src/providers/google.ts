@@ -4,7 +4,6 @@ import {
   type Part,
   type FunctionDeclaration,
   type GenerateContentResponseUsageMetadata,
-  Type,
 } from "@google/genai";
 
 import type {
@@ -138,44 +137,8 @@ export namespace GoogleProvider {
     return {
       name: tool.definition.name,
       description: tool.definition.description,
-      parameters: typebox_to_google_schema(tool.definition.input_schema),
+      parameters: tool.definition.input_schema,
     };
-  };
-
-  const typebox_to_google_schema = (schema: any): any => {
-    if (!schema) return undefined;
-
-    const result: any = {};
-
-    if (schema.type === "object") {
-      result.type = Type.OBJECT;
-      if (schema.properties) {
-        result.properties = {};
-        for (const [key, value] of Object.entries(schema.properties)) {
-          result.properties[key] = typebox_to_google_schema(value);
-        }
-      }
-      if (schema.required) {
-        result.required = schema.required;
-      }
-    } else if (schema.type === "string") {
-      result.type = Type.STRING;
-    } else if (schema.type === "number" || schema.type === "integer") {
-      result.type = Type.NUMBER;
-    } else if (schema.type === "boolean") {
-      result.type = Type.BOOLEAN;
-    } else if (schema.type === "array") {
-      result.type = Type.ARRAY;
-      if (schema.items) {
-        result.items = typebox_to_google_schema(schema.items);
-      }
-    }
-
-    if (schema.description) {
-      result.description = schema.description;
-    }
-
-    return result;
   };
 
   const message_param_to_google_content = (message: MessageParam): Content => {
@@ -185,7 +148,9 @@ export namespace GoogleProvider {
       if (content.type === "text") {
         parts.push({
           text: content.text,
-          thoughtSignature: content.thoughtSignature,
+          thoughtSignature: content.metadata?.thoughtSignature as
+            | string
+            | undefined,
         });
       } else if (content.type === "tool_use") {
         parts.push({
@@ -194,7 +159,9 @@ export namespace GoogleProvider {
             id: content.id,
             args: content.input as Record<string, unknown>,
           },
-          thoughtSignature: content.thoughtSignature,
+          thoughtSignature: content.metadata?.thoughtSignature as
+            | string
+            | undefined,
         });
       } else if (content.type === "tool_result") {
         const textContent = content.content
@@ -228,7 +195,9 @@ export namespace GoogleProvider {
         content.push({
           type: "text",
           text: part.text,
-          thoughtSignature: part.thoughtSignature,
+          metadata: part.thoughtSignature
+            ? { thoughtSignature: part.thoughtSignature }
+            : undefined,
         });
       }
 
@@ -240,7 +209,9 @@ export namespace GoogleProvider {
           id,
           name,
           input: args,
-          thoughtSignature: part.thoughtSignature,
+          metadata: part.thoughtSignature
+            ? { thoughtSignature: part.thoughtSignature }
+            : undefined,
         });
       }
     }

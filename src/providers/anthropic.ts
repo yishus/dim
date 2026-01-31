@@ -5,7 +5,12 @@ import type {
   RawMessageStreamEvent,
 } from "@anthropic-ai/sdk/resources/messages";
 
-import type { MessageResponse, MessageParam, MessageDelta } from "../ai";
+import type {
+  MessageResponse,
+  MessageParam,
+  MessageDelta,
+  ContentBlock,
+} from "../ai";
 import type { Tool } from "../tools";
 
 export type ModelId = "claude-sonnet-4-5-20250929" | "claude-opus-4-20250514";
@@ -103,23 +108,59 @@ export namespace AnthropicProvider {
   };
 
   const message_param_to_anthropic_message_param = (
-    messge: MessageParam,
+    message: MessageParam,
   ): AnthropicMessageParam => {
+    const content: AnthropicMessageParam["content"] = [];
+
+    for (const block of message.content) {
+      if (block.type === "text") {
+        content.push({ type: "text", text: block.text });
+      } else if (block.type === "tool_use") {
+        // Anthropic always provides IDs, but our generic type allows undefined for Google compatibility
+        content.push({
+          type: "tool_use",
+          id: block.id ?? "",
+          name: block.name,
+          input: block.input,
+        });
+      } else if (block.type === "tool_result") {
+        content.push({
+          type: "tool_result",
+          tool_use_id: block.tool_use_id ?? "",
+          content: block.content.map((c) => ({ type: "text" as const, text: c.text })),
+          is_error: block.isError,
+        });
+      }
+    }
+
     return {
-      role: messge.role,
-      content: messge.content,
+      role: message.role,
+      content,
     };
   };
 
   const anthropic_message_to_message_response = (
     message: AnthropicMessage,
   ): MessageResponse => {
+    const content: ContentBlock[] = [];
+
+    for (const block of message.content) {
+      if (block.type === "text") {
+        content.push({ type: "text", text: block.text });
+      } else if (block.type === "tool_use") {
+        content.push({
+          type: "tool_use",
+          id: block.id,
+          name: block.name,
+          input: block.input,
+        });
+      }
+    }
+
     return {
       message: {
         role: message.role,
-        content: message.content.filter(
-          (c) => c.type === "text" || c.type === "tool_use",
-        ),
+        content,
       },
       usage: {
         input_tokens: message.usage.input_tokens || 0,
