@@ -17,7 +17,7 @@ A terminal UI AI coding assistant with support for multiple AI providers.
 ## Installation
 
 ```bash
-git clone https://github.com/anthropics/helium.git
+git clone https://github.com/yishus/helium.git
 cd helium
 bun install
 ```
@@ -60,12 +60,12 @@ Type `@` followed by a filename to search and reference files in your project. T
 
 ### Key Bindings
 
-| Key | Action |
-|-----|--------|
-| `Enter` | Submit message |
-| `Shift+Enter` | New line |
-| `Up/Down` | Navigate menus |
-| `Escape` | Cancel dialogs |
+| Key           | Action         |
+| ------------- | -------------- |
+| `Enter`       | Submit message |
+| `Shift+Enter` | New line       |
+| `Up/Down`     | Navigate menus |
+| `Escape`      | Cancel dialogs |
 
 ## Project Context
 
