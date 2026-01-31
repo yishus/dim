@@ -11,15 +11,12 @@ import tools from "./tools";
 export type { ModelId as AnthropicModelId } from "./providers/anthropic";
 export type { GoogleModelId } from "./providers/google";
 export type { OpenAIModelId } from "./providers/openai";
-export { DEFAULT_MODEL, AVAILABLE_MODELS } from "./providers/anthropic";
 export {
-  DEFAULT_GOOGLE_MODEL,
-  AVAILABLE_GOOGLE_MODELS,
-} from "./providers/google";
-export {
-  DEFAULT_OPENAI_MODEL,
-  AVAILABLE_OPENAI_MODELS,
-} from "./providers/openai";
+  AVAILABLE_ANTHROPIC_MODELS,
+  DEFAULT_ANTHROPIC_MODEL,
+} from "./providers/anthropic";
+export { AVAILABLE_GOOGLE_MODELS } from "./providers/google";
+export { AVAILABLE_OPENAI_MODELS } from "./providers/openai";
 
 export type ModelId = AnthropicModelId | GoogleModelId | OpenAIModelId;
 

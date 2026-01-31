@@ -3,7 +3,7 @@ import {
   type Message,
   type MessageParam,
   type ModelId,
-  DEFAULT_MODEL,
+  DEFAULT_ANTHROPIC_MODEL,
 } from "./ai";
 import { Provider } from "./providers";
 import tools, {
@@ -23,8 +23,7 @@ interface StreamOptions {
 
 export class Agent {
   private context: MessageParam[] = [];
-  totalTokensUsed = 0;
-  model: ModelId = DEFAULT_MODEL;
+  model: ModelId = DEFAULT_ANTHROPIC_MODEL;
   provider: Provider = Provider.Anthropic;
 
   constructor(
@@ -64,7 +63,6 @@ export class Agent {
       }
 
       const { message, usage } = await fullMessage();
-      this.totalTokensUsed += usage.input_tokens + usage.output_tokens;
       updateTokenUsage?.(usage.input_tokens, usage.output_tokens);
       this.context.push(message);
       if (message.content.every((c) => c.type !== "tool_use")) {

@@ -23,12 +23,13 @@ const HomeScreen = (props: Props) => {
         style={{
           justifyContent: "center",
           alignItems: "center",
-          minWidth: 50,
+          minWidth: 60,
           width: "50%",
         }}
       >
-        <ascii-font font="tiny" text="helium" style={{ marginBottom: 2 }} />
-        <ChatTextbox onSubmit={handleSubmit} minHeight={1} />
+        <ascii-font font="tiny" text="helium" style={{ marginBottom: 1 }} />
+
+        <ChatTextbox onSubmit={handleSubmit} minHeight={2} />
       </box>
     </box>
   );

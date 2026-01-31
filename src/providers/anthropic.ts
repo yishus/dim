@@ -15,9 +15,9 @@ import type { Tool } from "../tools";
 
 export type ModelId = "claude-sonnet-4-5-20250929" | "claude-opus-4-20250514";
 
-export const DEFAULT_MODEL: ModelId = "claude-sonnet-4-5-20250929";
+export const DEFAULT_ANTHROPIC_MODEL: ModelId = "claude-sonnet-4-5-20250929";
 
-export const AVAILABLE_MODELS: { id: ModelId; name: string }[] = [
+export const AVAILABLE_ANTHROPIC_MODELS: { id: ModelId; name: string }[] = [
   { id: "claude-sonnet-4-5-20250929", name: "Sonnet" },
   { id: "claude-opus-4-20250514", name: "Opus" },
 ];
@@ -34,7 +34,7 @@ export namespace AnthropicProvider {
     input: MessageParam[],
     options?: AnthropicStreamOptions,
   ) => {
-    const { apiKey, tools, model = DEFAULT_MODEL } = options || {};
+    const { apiKey, tools, model = DEFAULT_ANTHROPIC_MODEL } = options || {};
     const client = new Anthropic({
       apiKey: apiKey,
     });
@@ -57,7 +57,7 @@ export namespace AnthropicProvider {
       apiKey,
       systemPrompt,
       tools,
-      model = DEFAULT_MODEL,
+      model = DEFAULT_ANTHROPIC_MODEL,
     } = options || {};
     const client = new Anthropic({
       apiKey: apiKey,
@@ -127,7 +127,10 @@ export namespace AnthropicProvider {
         content.push({
           type: "tool_result",
           tool_use_id: block.tool_use_id ?? "",
-          content: block.content.map((c) => ({ type: "text" as const, text: c.text })),
+          content: block.content.map((c) => ({
+            type: "text" as const,
+            text: c.text,
+          })),
           is_error: block.isError,
         });
       }

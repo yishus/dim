@@ -12,6 +12,7 @@ import ChatTextbox from "./ChatTextbox";
 import Message from "./Message";
 import ToolUseRequestDialog from "./ToolUseRequestDialog";
 import ModelSelectorDialog from "./ModelSelectorDialog";
+import { THEME } from "../theme";
 
 interface Props {
   session: Session;
@@ -22,11 +23,14 @@ const CodingAgent = (props: Props) => {
   const { session, userPrompt } = props;
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [tokenCost, setTokenCost] = useState(0);
-  const [tokenUsage, setTokenUsage] = useState(0);
+  const [inputTokens, setInputTokens] = useState(0);
+  const [outputTokens, setOutputTokens] = useState(0);
   const [showToolUseRequest, setShowToolUseRequest] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [currentModel, setCurrentModel] = useState<ModelId>(session.getModel());
-  const [currentProvider, setCurrentProvider] = useState<Provider>(session.getProvider());
+  const [currentProvider, setCurrentProvider] = useState<Provider>(
+    session.getProvider(),
+  );
   const toolUseRequestRef = useRef<ToolUseRequest | null>(null);
   const pendingApprovalRef = useRef<{
     resolve: (approved: boolean) => void;
@@ -66,10 +70,10 @@ const CodingAgent = (props: Props) => {
 
     session.eventEmitter.on("token_usage_update", (event) => {
       setTokenCost(event.cost);
-      setTokenUsage(event.token_count);
+      setInputTokens(event.input_tokens ?? 0);
+      setOutputTokens(event.output_tokens ?? 0);
     });
 
-    // Handle the initial prompt
     handleSubmit(userPrompt);
   }, []);
 
@@ -84,11 +88,19 @@ const CodingAgent = (props: Props) => {
     setCurrentModel(model);
     setCurrentProvider(provider);
     const modelInfo = ALL_MODELS.find((m) => m.id === model);
-    const providerName = provider === Provider.Anthropic ? "Anthropic" : provider === Provider.OpenAI ? "OpenAI" : "Google";
+    const providerName =
+      provider === Provider.Anthropic
+        ? "Anthropic"
+        : provider === Provider.OpenAI
+          ? "OpenAI"
+          : "Google";
     const modelName = modelInfo?.name ?? model;
     setMessages((prev) => [
       ...prev,
-      { role: "assistant", text: `Model changed to ${modelName} (${providerName})` },
+      {
+        role: "assistant",
+        text: `Model changed to ${modelName} (${providerName})`,
+      },
     ]);
     setShowModelSelector(false);
   };
@@ -112,41 +124,75 @@ const CodingAgent = (props: Props) => {
   const currentModelName =
     ALL_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
   const currentProviderName =
-    currentProvider === Provider.Anthropic ? "Anthropic" : currentProvider === Provider.OpenAI ? "OpenAI" : "Google";
+    currentProvider === Provider.Anthropic
+      ? "Anthropic"
+      : currentProvider === Provider.OpenAI
+        ? "OpenAI"
+        : "Google";
 
   return (
-    <box style={{ flexDirection: "row", width: "100%", height: "100%" }}>
-      <box style={{ width: "75%", border: true, flexDirection: "column" }}>
-        <scrollbox
-          style={{ flexGrow: 1 }}
-          stickyScroll={true}
-          stickyStart="bottom"
-        >
-          {messages.map((message, index) => (
-            <Message key={index} message={message} index={index} />
-          ))}
-          {showToolUseRequest && toolUseRequestRef.current && (
-            <ToolUseRequestDialog
-              request={toolUseRequestRef.current}
-              session={session}
-              onSelect={handleToolUseSelect}
-            />
-          )}
-          {showModelSelector && (
-            <ModelSelectorDialog
-              currentModel={currentModel}
-              onSelect={handleModelSelect}
-              onCancel={handleModelCancel}
-            />
-          )}
-        </scrollbox>
-        <ChatTextbox onSubmit={handleSubmit} minHeight={3} />
-      </box>
-      <box style={{ width: "25%", border: true, flexDirection: "column" }}>
-        <text>Provider: {currentProviderName}</text>
-        <text>Model: {currentModelName}</text>
-        <text>Tokens used: {tokenUsage}</text>
-        <text>Cost: ${tokenCost.toFixed(6)}</text>
+    <box style={{ padding: 1 }}>
+      <scrollbox
+        style={{ flexGrow: 1, padding: 1 }}
+        stickyScroll={true}
+        stickyStart="bottom"
+      >
+        {messages.map((message, index) => (
+          <Message key={index} message={message} index={index} />
+        ))}
+        {showToolUseRequest && toolUseRequestRef.current && (
+          <ToolUseRequestDialog
+            request={toolUseRequestRef.current}
+            session={session}
+            onSelect={handleToolUseSelect}
+          />
+        )}
+        {showModelSelector && (
+          <ModelSelectorDialog
+            currentModel={currentModel}
+            onSelect={handleModelSelect}
+            onCancel={handleModelCancel}
+          />
+        )}
+      </scrollbox>
+      <ChatTextbox onSubmit={handleSubmit} minHeight={6} />
+      <box
+        style={{
+          flexDirection: "row",
+        }}
+      >
+        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+          Provider
+        </text>
+        <text fg={THEME.colors.text.primary} style={{ marginRight: 1 }}>
+          {currentProviderName}
+        </text>
+
+        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+          Model
+        </text>
+        <text fg={THEME.colors.text.primary} style={{ marginRight: 1 }}>
+          {currentModelName}
+        </text>
+
+        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+          Input Tokens
+        </text>
+        <text fg={THEME.colors.text.primary} style={{ marginRight: 1 }}>
+          {inputTokens}
+        </text>
+
+        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+          Output Tokens
+        </text>
+        <text fg={THEME.colors.text.primary} style={{ marginRight: 1 }}>
+          {outputTokens}
+        </text>
+
+        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+          Total Cost
+        </text>
+        <text fg={THEME.colors.text.primary}>${tokenCost.toFixed(6)}</text>
       </box>
     </box>
   );

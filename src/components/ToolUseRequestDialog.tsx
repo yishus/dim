@@ -1,18 +1,25 @@
 import { useRef } from "react";
-import type { SelectRenderable, SelectOption } from "@opentui/core";
+import {
+  type SelectRenderable,
+  type SelectOption,
+  createTextAttributes,
+} from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import type { ToolUseRequest } from "../session";
 import type { Session } from "../session";
 import type { ToolInputMap } from "../tools";
+import { THEME } from "../theme";
 
 const toolUseRequestOptions: SelectOption[] = [
-  { name: "Yes", description: "Allow agent to use tool", value: "yes" },
+  { name: "Yes", description: "", value: "yes" },
   {
     name: "No",
-    description: "Disallow agent's request to use tool",
+    description: "",
     value: "no",
   },
 ];
+
+const boldAttr = createTextAttributes({ bold: true });
 
 interface Props {
   request: ToolUseRequest;
@@ -47,16 +54,20 @@ const ToolUseRequestDialog = ({ request, session, onSelect }: Props) => {
   }
 
   return (
-    <>
-      <text>{`${toolName} ${description}`}</text>
+    <box
+      borderColor={THEME.colors.border.default}
+      style={{ padding: 1 }}
+      border={["left"]}
+    >
+      <text style={{ marginTop: 1 }}>{`${toolName} ${description}`}</text>
       {diffContent && <diff diff={diffContent} showLineNumbers={true} />}
       <select
-        style={{ height: 6 }}
+        style={{ height: 6, marginTop: 1 }}
         options={toolUseRequestOptions}
         focused={false}
         ref={selectRef}
       />
-    </>
+    </box>
   );
 };
 

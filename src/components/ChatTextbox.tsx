@@ -9,6 +9,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 
 import { isPrintableASCII } from "../helper";
+import { THEME } from "../theme";
 
 const execAsync = promisify(exec);
 
@@ -28,7 +29,7 @@ const ChatTextbox = (props: Props) => {
     onSubmit,
     minHeight = 1,
     maxHeight = 6,
-    placeholder = "Type here...",
+    placeholder = "Ask Anything...",
   } = props;
 
   const textareaRef = useRef<TextareaRenderable>(null);
@@ -65,6 +66,10 @@ const ChatTextbox = (props: Props) => {
         selectRef.current?.moveUp();
         return;
       }
+      if (key.name === "escape") {
+        setPopOverVisible(false);
+        return;
+      }
     }
 
     if (fileSearchVisible) {
@@ -74,6 +79,10 @@ const ChatTextbox = (props: Props) => {
       }
       if (key.name === "up") {
         fileSelectRef.current?.moveUp();
+        return;
+      }
+      if (key.name === "escape") {
+        setFileSearchVisible(false);
         return;
       }
     }
@@ -172,14 +181,16 @@ const ChatTextbox = (props: Props) => {
     <>
       {popOverVisible && (
         <box
+          border={true}
+          borderColor={THEME.colors.border.default}
+          backgroundColor={THEME.colors.bg.secondary}
           style={{
-            border: true,
-            height: 6,
             width: "100%",
+            height: Math.min(2 * availableCommands.length, 4) + 2,
           }}
         >
           <select
-            style={{ height: 4 }}
+            style={{ height: Math.min(2 * availableCommands.length, 4) }}
             options={availableCommands}
             focused={false}
             ref={selectRef}
@@ -188,8 +199,10 @@ const ChatTextbox = (props: Props) => {
       )}
       {fileSearchVisible && availableFiles.length > 0 && (
         <box
+          border={true}
+          borderColor={THEME.colors.border.default}
+          backgroundColor={THEME.colors.bg.secondary}
           style={{
-            border: true,
             height: 8,
             width: "100%",
           }}
@@ -203,13 +216,15 @@ const ChatTextbox = (props: Props) => {
         </box>
       )}
       <box
+        border={true}
+        borderStyle="heavy"
+        borderColor={THEME.colors.border.default}
         style={{
-          border: true,
           width: "100%",
           flexDirection: "row",
         }}
       >
-        <text>&gt; </text>
+        <text fg={THEME.colors.text.muted}>&gt; </text>
         <textarea
           ref={textareaRef}
           placeholder={placeholder}

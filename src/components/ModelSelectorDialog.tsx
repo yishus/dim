@@ -1,7 +1,12 @@
 import { useRef } from "react";
-import type { SelectRenderable, SelectOption } from "@opentui/core";
+import {
+  type SelectRenderable,
+  type SelectOption,
+  createTextAttributes,
+} from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import { ALL_MODELS, Provider, type ModelId } from "../session";
+import { THEME } from "../theme";
 
 const providerDisplayName = (provider: Provider): string => {
   switch (provider) {
@@ -19,6 +24,8 @@ const modelOptions: SelectOption[] = ALL_MODELS.map((m) => ({
   description: m.id,
   value: `${m.provider}:${m.id}`,
 }));
+
+const boldAttr = createTextAttributes({ bold: true });
 
 interface Props {
   currentModel: ModelId;
@@ -55,18 +62,24 @@ const ModelSelectorDialog = ({ currentModel, onSelect, onCancel }: Props) => {
     ALL_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
 
   return (
-    <box style={{ border: true, padding: 1 }}>
-      <text style={{ marginBottom: 1 }}>
-        Select model (current: {currentModelName})
-      </text>
-      <select
-        style={{ height: 4 }}
-        options={modelOptions}
-        focused={false}
-        ref={selectRef}
-      />
-      <text style={{ marginTop: 1 }}>
-        Press Enter to select, Escape to cancel
+    <box
+      border={true}
+      borderColor={THEME.colors.border.default}
+      backgroundColor={THEME.colors.bg.secondary}
+      style={{ maxWidth: 100 }}
+    >
+      <text attributes={boldAttr}>Select Model</text>
+      <text fg={THEME.colors.text.muted}>Current: {currentModelName}</text>
+      <box border={["top", "bottom"]} borderColor={THEME.colors.border.default}>
+        <select
+          style={{ height: 6 }}
+          options={modelOptions}
+          focused={false}
+          ref={selectRef}
+        />
+      </box>
+      <text fg={THEME.colors.text.muted}>
+        Enter to select, Escape to cancel
       </text>
     </box>
   );

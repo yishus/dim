@@ -5,11 +5,8 @@ import EventEmitter from "events";
 import {
   type MessageDelta,
   type ModelId,
-  DEFAULT_MODEL,
-  AVAILABLE_MODELS,
-  DEFAULT_GOOGLE_MODEL,
+  AVAILABLE_ANTHROPIC_MODELS,
   AVAILABLE_GOOGLE_MODELS,
-  DEFAULT_OPENAI_MODEL,
   AVAILABLE_OPENAI_MODELS,
 } from "./ai";
 import { Agent } from "./agent";
@@ -21,14 +18,6 @@ import { TokenCostHelper } from "./token-cost";
 
 export type { ModelId };
 export { Provider };
-export {
-  DEFAULT_MODEL,
-  AVAILABLE_MODELS,
-  DEFAULT_GOOGLE_MODEL,
-  AVAILABLE_GOOGLE_MODELS,
-  DEFAULT_OPENAI_MODEL,
-  AVAILABLE_OPENAI_MODELS,
-};
 
 export interface ProviderModel {
   id: ModelId;
@@ -37,7 +26,10 @@ export interface ProviderModel {
 }
 
 export const ALL_MODELS: ProviderModel[] = [
-  ...AVAILABLE_MODELS.map((m) => ({ ...m, provider: Provider.Anthropic })),
+  ...AVAILABLE_ANTHROPIC_MODELS.map((m) => ({
+    ...m,
+    provider: Provider.Anthropic,
+  })),
   ...AVAILABLE_GOOGLE_MODELS.map((m) => ({ ...m, provider: Provider.Google })),
   ...AVAILABLE_OPENAI_MODELS.map((m) => ({ ...m, provider: Provider.OpenAI })),
 ];
@@ -128,7 +120,8 @@ export class Session {
     this.totalCost += streamCost;
     this.eventEmitter.emit("token_usage_update", {
       cost: this.totalCost,
-      token_count: input_tokens + output_tokens,
+      input_tokens,
+      output_tokens,
     });
   }
 
