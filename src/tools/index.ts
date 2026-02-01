@@ -4,6 +4,8 @@ import { Provider } from "../providers";
 import askUserQuestion from "./ask-user-question";
 import bash from "./bash";
 import edit from "./edit";
+import glob from "./glob";
+import grep from "./grep";
 import read from "./read";
 import webFetch from "./web-fetch";
 import write from "./write";
@@ -21,7 +23,7 @@ export interface Tool<T extends TSchema> {
   callFunction: (args: Static<T>, config: ToolConfig) => Promise<string>;
 }
 
-const tools = { askUserQuestion, bash, edit, read, webFetch, write };
+const tools = { askUserQuestion, bash, edit, glob, grep, read, webFetch, write };
 
 export type ToolName = keyof typeof tools;
 
@@ -50,6 +52,8 @@ export const requestToolUsePermission: Record<ToolName, boolean> = {
   askUserQuestion: false, // Handled separately via askUserQuestionHandler
   bash: true,
   edit: true,
+  glob: false,
+  grep: false,
   read: false,
   webFetch: true,
   write: true,
@@ -70,6 +74,12 @@ export const toolUseDescription = (
     case "edit":
       const editInput = input as ToolInputMap["edit"];
       return `file at path: ${editInput.path}`;
+    case "glob":
+      const globInput = input as ToolInputMap["glob"];
+      return `pattern: ${globInput.pattern}`;
+    case "grep":
+      const grepInput = input as ToolInputMap["grep"];
+      return `pattern: ${grepInput.pattern}`;
     case "read":
       const readInput = input as ToolInputMap["read"];
       return `file at path: ${readInput.path}`;
