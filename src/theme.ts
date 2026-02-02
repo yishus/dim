@@ -12,5 +12,13 @@ export const THEME = {
     bg: {
       secondary: "#111111",
     },
+    highlight: {
+      path: "#00AAFF", // file paths
+      command: "#FFD700", // bash commands
+      code: "#C792EA", // inline code
+      error: "#FF6B6B", // errors
+      success: "#4ADE80", // success messages
+      warning: "#FBBF24", // warnings
+    },
   },
 };
