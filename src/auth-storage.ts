@@ -12,7 +12,7 @@ export class AuthStorage {
   private data: AuthStorageData = {};
 
   constructor() {
-    const authFilePath = join(homedir(), ".helium", "agent", "auth.json");
+    const authFilePath = join(homedir(), ".dim", "agent", "auth.json");
     this.data = JSON.parse(readFileSync(authFilePath, "utf-8"));
   }
 

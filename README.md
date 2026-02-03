@@ -1,12 +1,6 @@
-# Helium
+# dim
 
-A terminal UI AI coding agent with support for multiple AI providers.
-
-## Supported Providers
-
-- **Anthropic** (Claude)
-- **Google** (Gemini)
-- **OpenAI** (GPT)
+A lightweight terminal coding agent. Use it as it is, or as a base to build your own specialized coding agent.
 
 ## Requirements
 
@@ -17,15 +11,15 @@ A terminal UI AI coding agent with support for multiple AI providers.
 ## Installation
 
 ```bash
-git clone https://github.com/yishus/helium.git
-cd helium
+git clone https://github.com/yishus/dim.git
+cd dim
 bun install
 bun run dev
 ```
 
 ## Configuration
 
-Add your API keys to `~/.helium/agent/auth.json`:
+Add your API keys to `~/.dim/agent/auth.json`:
 
 ```json
 {

@@ -1,9 +1,9 @@
 {
-  "name": "helium",
+  "name": "dim",
   "module": "src/index.tsx",
   "type": "module",
   "bin": {
-    "helium": "src/index.tsx"
+    "dim": "src/index.tsx"
   },
   "private": true,
   "scripts": {

@@ -32,7 +32,7 @@ const HomeScreen = (props: Props) => {
           width: "50%",
         }}
       >
-        <ascii-font font="tiny" text="helium" style={{ marginBottom: 1 }} />
+        <ascii-font font="tiny" text="dim" style={{ marginBottom: 1 }} />
 
         <ChatTextbox onSubmit={handleSubmit} minHeight={2} />
       </box>

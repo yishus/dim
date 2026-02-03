@@ -82,7 +82,7 @@ export class Session {
     const cwd = process.cwd();
     const scratchpadPath = join(
       tmpdir(),
-      "helium",
+      "dim",
       cwd.replace(/[:/\\]/g, "-"),
       "scratchpad",
     );
