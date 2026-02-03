@@ -1,6 +1,6 @@
 # Helium
 
-A terminal UI AI coding assistant with support for multiple AI providers.
+A terminal UI AI coding agent with support for multiple AI providers.
 
 ## Supported Providers
 
@@ -20,11 +20,12 @@ A terminal UI AI coding assistant with support for multiple AI providers.
 git clone https://github.com/yishus/helium.git
 cd helium
 bun install
+bun run dev
 ```
 
 ## Configuration
 
-Create your auth configuration file at `~/.helium/agent/auth.json`:
+Add your API keys to `~/.helium/agent/auth.json`:
 
 ```json
 {
@@ -39,34 +40,3 @@ Create your auth configuration file at `~/.helium/agent/auth.json`:
   }
 }
 ```
-
-Add API keys for the providers you want to use.
-
-## Usage
-
-Start Helium:
-
-```bash
-bun run dev
-```
-
-### Switching Models
-
-Use the `/model` command to open the model selector and switch between providers and models.
-
-### File References
-
-Type `@` followed by a filename to search and reference files in your project. The file selector uses fuzzy matching to find files tracked by git.
-
-### Key Bindings
-
-| Key           | Action         |
-| ------------- | -------------- |
-| `Enter`       | Submit message |
-| `Shift+Enter` | New line       |
-| `Up/Down`     | Navigate menus |
-| `Escape`      | Cancel dialogs |
-
-## Project Context
-
-Place a `CLAUDE.md` file in your project root to provide context and instructions that will be included in every conversation.
