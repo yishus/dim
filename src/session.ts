@@ -15,6 +15,7 @@ import {
 import { Agent } from "./agent";
 import { Provider } from "./providers";
 import {
+  getAllToolDefinitions,
   getToolDescription,
   registerExtensionTools,
   type ToolInputMap,
@@ -177,6 +178,7 @@ export class Session {
 
   async prompt(input: string) {
     const stream = this.agent.stream(input, {
+      tools: getAllToolDefinitions(),
       canUseTool: this.handleToolUseRequest.bind(this),
       askUserQuestion: this.handleAskUserQuestion.bind(this),
       emitMessage: this.handleEmitMessage.bind(this),

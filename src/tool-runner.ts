@@ -1,12 +1,12 @@
 import type { Message, MessageParam } from "./ai";
 import type { Provider } from "./providers";
 import type { QuestionAnswer } from "./session";
-import tools, {
+import {
   callTool,
   getToolPermission,
   getToolDescription,
+  isKnownTool,
   type ToolInputMap,
-  type ToolName,
   type AskUserQuestionInput,
 } from "./tools";
 
@@ -61,46 +61,54 @@ export async function runToolCalls(
   for (const content of message.content) {
     if (content.type === "tool_use") {
       const { id, name, input } = content;
-      if (interrupted) {
+      if (!isKnownTool(name)) {
         responses.push({
           id,
           name,
           content: [
             {
               type: "text" as const,
-              text: "Tool use was interrupted.",
+              text: "Tool not found.",
             },
           ],
-          isError: true,
         });
-        continue;
-      }
-      if (getToolPermission(name as ToolName) && canUseTool) {
-        const canUse = await canUseTool(name, input);
-        if (!canUse) {
-          emitMessage?.(
-            `Interrupted: ${name} ${getToolDescription(name as ToolName, input)}`,
-          );
+      } else {
+        if (interrupted) {
           responses.push({
             id,
             name,
             content: [
               {
                 type: "text" as const,
-                text: "Tool use is not permitted.",
+                text: "Tool use was interrupted.",
               },
             ],
             isError: true,
           });
-          interrupted = true;
           continue;
         }
-      }
-      const tool = tools[name as ToolName];
-      if (tool) {
-        emitMessage?.(
-          `${name} ${getToolDescription(name as ToolName, input)}`,
-        );
+        if (getToolPermission(name) && canUseTool) {
+          const canUse = await canUseTool(name, input);
+          if (!canUse) {
+            emitMessage?.(
+              `Interrupted: ${name} ${getToolDescription(name, input)}`,
+            );
+            responses.push({
+              id,
+              name,
+              content: [
+                {
+                  type: "text" as const,
+                  text: "Tool use is not permitted.",
+                },
+              ],
+              isError: true,
+            });
+            interrupted = true;
+            continue;
+          }
+        }
+        emitMessage?.(`${name} ${getToolDescription(name, input)}`);
 
         // Special handling for askUserQuestion tool
         if (name === "askUserQuestion" && askUserQuestion) {
@@ -115,11 +123,7 @@ export async function runToolCalls(
           continue;
         }
 
-        const result = await callTool(
-          name as ToolName,
-          input as ToolInputMap[ToolName],
-          { provider },
-        );
+        const result = await callTool(name, input, { provider });
         if (name === "read") {
           const readInput = input as ToolInputMap["read"];
           saveToSessionMemory?.(readInput.path, result);
@@ -128,17 +132,6 @@ export async function runToolCalls(
           id,
           name,
           content: [{ type: "text" as const, text: result }],
-        });
-      } else {
-        responses.push({
-          id,
-          name,
-          content: [
-            {
-              type: "text" as const,
-              text: "Tool not found.",
-            },
-          ],
         });
       }
     }

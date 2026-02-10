@@ -44,7 +44,9 @@ const callFunction = async (args: argsType, config: ToolConfig) => {
     const markdown = td.turndown(await response.text());
     const model = SMALL_MODELS[provider];
     const agent = new Agent(model, provider);
-    const agentMessage = await agent.prompt(`${prompt}\n\n${markdown}`);
+    const agentMessage = await agent.prompt(`${prompt}\n\n${markdown}`, {
+      tools: [],
+    });
     return agentMessage.text;
   }
 };
