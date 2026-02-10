@@ -190,6 +190,7 @@ export class Session {
     for await (const event of stream) {
       this.processDelta(event);
     }
+    this.eventEmitter.emit("message_end");
   }
 
   async handleToolUseRequest(toolName: string, input: unknown) {

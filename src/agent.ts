@@ -86,7 +86,7 @@ export class Agent {
 
       const { resultMessage, interrupted } = await runToolCalls(
         message,
-        this.provider,
+        { provider: this.provider, model: this.model },
         { canUseTool, askUserQuestion, emitMessage, saveToSessionMemory },
       );
       this.context.push(resultMessage);
@@ -125,7 +125,7 @@ export class Agent {
 
       const { resultMessage, interrupted } = await runToolCalls(
         message,
-        this.provider,
+        { provider: this.provider, model: this.model },
         { canUseTool, askUserQuestion, emitMessage, saveToSessionMemory },
       );
       messages.push(resultMessage);

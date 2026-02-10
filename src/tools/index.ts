@@ -1,6 +1,7 @@
 import type { Static, TSchema } from "typebox";
 
 import { Provider } from "../providers";
+import type { ModelId } from "../ai";
 import type { ExtensionRegistry, ExtensionTool } from "../extensions";
 import { getSession } from "../session";
 import askUserQuestion from "./ask-user-question";
@@ -20,6 +21,7 @@ export type {
 
 export interface ToolConfig {
   provider: Provider;
+  model: ModelId;
 }
 
 export interface ToolDefinition {
@@ -79,6 +81,8 @@ export async function callTool(
     if (extensionTool) {
       return await extensionTool.execute(input as never, {
         sessionManager: getSession().sessionManager,
+        provider: config.provider,
+        model: config.model,
       });
     }
     return `Error: Tool "${name}" not found.`;
@@ -106,8 +110,17 @@ export function isKnownTool(name: string): boolean {
 
 export function getAllToolDefinitions(): ToolDefinition[] {
   const builtins = Object.values(tools).map((tool) => tool.definition);
-  const extensions = Object.values(extensionTools);
+  const extensions = Array.from(extensionTools.values()).map((t) => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema,
+  }));
   return [...builtins, ...extensions];
+}
+
+export function getToolDefinitionsByName(names: string[]): ToolDefinition[] {
+  const nameSet = new Set(names);
+  return getAllToolDefinitions().filter((t) => nameSet.has(t.name));
 }
 
 export default tools;

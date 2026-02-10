@@ -1,11 +1,11 @@
 import type { Message, MessageParam } from "./ai";
-import type { Provider } from "./providers";
 import type { QuestionAnswer } from "./session";
 import {
   callTool,
   getToolPermission,
   getToolDescription,
   isKnownTool,
+  type ToolConfig,
   type ToolInputMap,
   type AskUserQuestionInput,
 } from "./tools";
@@ -49,7 +49,7 @@ export function formatQuestionAnswers(answers: QuestionAnswer[]): string {
  */
 export async function runToolCalls(
   message: Message,
-  provider: Provider,
+  config: ToolConfig,
   callbacks: ToolRunnerCallbacks,
 ): Promise<{ resultMessage: MessageParam; interrupted: boolean }> {
   const { canUseTool, askUserQuestion, emitMessage, saveToSessionMemory } =
@@ -123,7 +123,7 @@ export async function runToolCalls(
           continue;
         }
 
-        const result = await callTool(name, input, { provider });
+        const result = await callTool(name, input, config);
         if (name === "read") {
           const readInput = input as ToolInputMap["read"];
           saveToSessionMemory?.(readInput.path, result);

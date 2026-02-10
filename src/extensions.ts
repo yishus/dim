@@ -4,9 +4,13 @@ import { homedir } from "os";
 import type { Static, TSchema } from "typebox";
 
 import { type SessionManager } from "./session-manager";
+import type { Provider } from "./providers";
+import type { ModelId } from "./ai";
 
 export interface ExtensionToolCallContext {
   sessionManager: SessionManager;
+  provider: Provider;
+  model: ModelId;
 }
 
 export interface ExtensionTool<T extends TSchema> {
@@ -15,7 +19,7 @@ export interface ExtensionTool<T extends TSchema> {
   inputSchema: T;
   execute: (args: Static<T>, ctx: ExtensionToolCallContext) => Promise<string>;
   requiresPermission?: boolean;
-  describeUse?: (input: unknown) => string;
+  describeUse?: (input: Static<T>) => string;
 }
 
 export interface ExtensionCommand {

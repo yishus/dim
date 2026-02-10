@@ -18,6 +18,7 @@ import AskUserQuestionDialog from "./AskUserQuestionDialog";
 import ModelSelectorDialog from "./ModelSelectorDialog";
 import { THEME } from "../theme";
 import type { AskUserQuestionInput } from "../tools";
+import LoadingIndicator from "./LoadingIndicator";
 
 interface Props {
   session: Session;
@@ -45,6 +46,7 @@ const CodingAgent = (props: Props) => {
   const [showToolUseRequest, setShowToolUseRequest] = useState(false);
   const [showAskUserQuestion, setShowAskUserQuestion] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState<ModelId>(session.getModel());
   const [currentProvider, setCurrentProvider] = useState<Provider>(
     session.getProvider(),
@@ -107,6 +109,10 @@ const CodingAgent = (props: Props) => {
       setOutputTokens(event.output_tokens ?? 0);
     });
 
+    session.eventEmitter.on("message_end", () => {
+      setIsLoading(false);
+    });
+
     handleSubmit(userPrompt);
   }, []);
 
@@ -159,9 +165,7 @@ const CodingAgent = (props: Props) => {
       return;
     }
     // Check extension commands
-    const extCmd = extensionCommands.find(
-      (cmd) => cmd.name === submittedText,
-    );
+    const extCmd = extensionCommands.find((cmd) => cmd.name === submittedText);
     if (extCmd) {
       extCmd.execute();
       return;
@@ -170,6 +174,7 @@ const CodingAgent = (props: Props) => {
       ...prevMessages,
       { role: "user", text: submittedText },
     ]);
+    setIsLoading(true);
     session.prompt(submittedText);
   };
 
@@ -208,8 +213,13 @@ const CodingAgent = (props: Props) => {
             onCancel={handleModelCancel}
           />
         )}
+        {isLoading && <LoadingIndicator />}
       </scrollbox>
-      <ChatTextbox onSubmit={handleSubmit} commands={allCommands} minHeight={6} />
+      <ChatTextbox
+        onSubmit={handleSubmit}
+        commands={allCommands}
+        minHeight={6}
+      />
       <box
         style={{
           flexDirection: "row",
