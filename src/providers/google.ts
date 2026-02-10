@@ -60,6 +60,7 @@ export const GoogleProvider: ProviderInterface = {
       systemPrompt,
       tools,
       model = DEFAULT_GOOGLE_MODEL,
+      signal,
     } = options || {};
 
     if (!apiKey) {
@@ -75,6 +76,7 @@ export const GoogleProvider: ProviderInterface = {
           ? [{ functionDeclarations: tools.map(tool_to_function_declaration) }]
           : undefined,
         systemInstruction: systemPrompt,
+        abortSignal: signal,
       },
     });
 
@@ -129,7 +131,7 @@ const tool_to_function_declaration = (
   return {
     name: tool.name,
     description: tool.description,
-    parameters: tool.inputSchema,
+    parametersJsonSchema: tool.inputSchema,
   };
 };
 

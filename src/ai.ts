@@ -136,6 +136,7 @@ export namespace AI {
     systemPrompt?: string,
     model?: ModelId,
     tools?: ToolDefinition[],
+    signal?: AbortSignal,
   ) => {
     const authStorage = new AuthStorage();
     const apiKey = authStorage.get(provider);
@@ -144,6 +145,7 @@ export namespace AI {
       systemPrompt,
       tools,
       model,
+      signal,
     });
   };
 }

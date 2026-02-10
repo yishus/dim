@@ -5,6 +5,16 @@ import { maybeSummarize } from "./summarizer";
 import { runToolCalls } from "./tool-runner";
 import { type AskUserQuestionInput, type ToolDefinition } from "./tools";
 
+function isAbortError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    ((err as Error).message.includes("Request was aborted") ||
+      (err as Error).message.includes("AbortError") ||
+      (err as Error).name === "APIUserAbortError")
+  );
+}
+
 interface PromptOptions {
   tools: ToolDefinition[];
   canUseTool?: (name: string, input: unknown) => Promise<boolean>;
@@ -17,6 +27,7 @@ interface PromptOptions {
 export class Agent {
   private context: MessageParam[] = [];
   private contextTokens: number = 0;
+  private abortController?: AbortController;
 
   constructor(
     public model: ModelId,
@@ -24,6 +35,10 @@ export class Agent {
     public systemPrompt?: string,
     public systemReminderStart?: string,
   ) {}
+
+  cancel() {
+    this.abortController?.abort();
+  }
 
   async *stream(input: string | undefined, options: PromptOptions) {
     const {
@@ -50,50 +65,61 @@ export class Agent {
       this.context.push(this.nextMessage(input));
     }
 
-    while (true) {
-      const { fullMessage, streamText } = AI.stream(
-        this.provider,
-        this.context,
-        this.systemPrompt,
-        this.model,
-        tools,
-      );
+    this.abortController = new AbortController();
+    const { signal } = this.abortController;
 
-      for await (const event of streamText()) {
-        yield event;
+    try {
+      while (true) {
+        const { fullMessage, streamText } = AI.stream(
+          this.provider,
+          this.context,
+          this.systemPrompt,
+          this.model,
+          tools,
+          signal,
+        );
+
+        for await (const event of streamText()) {
+          yield event;
+        }
+
+        if (signal.aborted) return;
+
+        const { message, usage } = await fullMessage();
+        updateTokenUsage?.(usage.input_tokens, usage.output_tokens);
+        this.contextTokens = usage.input_tokens; // Track current context size
+
+        // Check if we need to summarize before continuing
+        const summarizeResult = await maybeSummarize(
+          this.context,
+          this.contextTokens,
+          this.provider,
+          emitMessage,
+        );
+        if (summarizeResult) {
+          this.context = summarizeResult.context;
+          this.contextTokens = summarizeResult.contextTokens;
+        }
+
+        this.context.push(message);
+        if (message.content.every((c) => c.type !== "tool_use")) {
+          break;
+        }
+
+        const { resultMessage, interrupted } = await runToolCalls(
+          message,
+          { provider: this.provider, model: this.model },
+          { canUseTool, askUserQuestion, emitMessage, saveToSessionMemory },
+        );
+        this.context.push(resultMessage);
+
+        if (interrupted) {
+          break;
+        }
       }
-
-      const { message, usage } = await fullMessage();
-      updateTokenUsage?.(usage.input_tokens, usage.output_tokens);
-      this.contextTokens = usage.input_tokens; // Track current context size
-
-      // Check if we need to summarize before continuing
-      const summarizeResult = await maybeSummarize(
-        this.context,
-        this.contextTokens,
-        this.provider,
-        emitMessage,
-      );
-      if (summarizeResult) {
-        this.context = summarizeResult.context;
-        this.contextTokens = summarizeResult.contextTokens;
-      }
-
-      this.context.push(message);
-      if (message.content.every((c) => c.type !== "tool_use")) {
-        break;
-      }
-
-      const { resultMessage, interrupted } = await runToolCalls(
-        message,
-        { provider: this.provider, model: this.model },
-        { canUseTool, askUserQuestion, emitMessage, saveToSessionMemory },
-      );
-      this.context.push(resultMessage);
-
-      if (interrupted) {
-        break;
-      }
+    } catch (err) {
+      if (isAbortError(err)) return;
+      throw err;
     }
   }
 

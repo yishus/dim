@@ -57,18 +57,22 @@ export const AnthropicProvider: ProviderInterface = {
       systemPrompt,
       tools,
       model = DEFAULT_ANTHROPIC_MODEL,
+      signal,
     } = options || {};
     const client = new Anthropic({
       apiKey: apiKey,
     });
 
-    const stream = client.messages.stream({
-      max_tokens: 16384,
-      messages: input.map(message_param_to_anthropic_message_param),
-      tools: tools?.map((tool) => tool_definition_to_anthropic_tool(tool)),
-      model: model as AnthropicModelId,
-      system: systemPrompt,
-    });
+    const stream = client.messages.stream(
+      {
+        max_tokens: 16384,
+        messages: input.map(message_param_to_anthropic_message_param),
+        tools: tools?.map((tool) => tool_definition_to_anthropic_tool(tool)),
+        model: model as AnthropicModelId,
+        system: systemPrompt,
+      },
+      { signal },
+    );
 
     return {
       fullMessage: async function () {

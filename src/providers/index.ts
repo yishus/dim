@@ -20,6 +20,7 @@ export interface StreamOptions {
   tools?: ToolDefinition[];
   systemPrompt?: string;
   model?: ModelId;
+  signal?: AbortSignal;
 }
 
 export interface StreamResult {

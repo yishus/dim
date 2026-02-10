@@ -18,7 +18,8 @@ const LoadingIndicator = () => {
       <text fg={THEME.colors.highlight.warning}>
         {SPINNER_FRAMES[frame]}{" "}
       </text>
-      <text fg={THEME.colors.text.muted}>Thinking...</text>
+      <text fg={THEME.colors.text.muted}>Thinking... </text>
+      <text fg={THEME.colors.text.muted}>(esc to interrupt)</text>
     </box>
   );
 };

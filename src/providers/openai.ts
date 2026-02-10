@@ -59,6 +59,7 @@ export const OpenAIProvider: ProviderInterface = {
       systemPrompt,
       tools,
       model = DEFAULT_OPENAI_MODEL,
+      signal,
     } = options || {};
 
     if (!apiKey) {
@@ -67,13 +68,16 @@ export const OpenAIProvider: ProviderInterface = {
 
     const client = new OpenAI({ apiKey });
 
-    const streamResponse = client.responses.create({
-      model: model as OpenAIModelId,
-      instructions: systemPrompt,
-      input: input.map(message_param_to_input_item).flat(),
-      tools: tools?.map(tool_to_function_tool),
-      stream: true,
-    });
+    const streamResponse = client.responses.create(
+      {
+        model: model as OpenAIModelId,
+        instructions: systemPrompt,
+        input: input.map(message_param_to_input_item).flat(),
+        tools: tools?.map(tool_to_function_tool),
+        stream: true,
+      },
+      { signal },
+    );
 
     // Accumulated state for full message
     let accumulatedContent = "";

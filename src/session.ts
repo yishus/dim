@@ -187,10 +187,27 @@ export class Session {
       saveToSessionMemory: this.handleSaveToSessionMemory.bind(this),
       updateTokenUsage: this.handleTokenUsage.bind(this),
     });
-    for await (const event of stream) {
-      this.processDelta(event);
+    try {
+      for await (const event of stream) {
+        this.processDelta(event);
+      }
+    } catch (err) {
+      // Abort errors are expected when the user cancels a stream.
+      // The agent handles most abort errors internally, but some
+      // may propagate from the async generator teardown.
+      const isAbort =
+        typeof err === "object" &&
+        err !== null &&
+        ((err as Error).message.includes("Request was aborted") ||
+          (err as Error).message.includes("AbortError") ||
+          (err as Error).name === "APIUserAbortError");
+      if (!isAbort) throw err;
     }
     this.eventEmitter.emit("message_end");
+  }
+
+  cancel() {
+    this.agent.cancel();
   }
 
   async handleToolUseRequest(toolName: string, input: unknown) {

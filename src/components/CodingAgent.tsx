@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   Session,
@@ -11,6 +11,7 @@ import {
   Provider,
 } from "../session";
 import { PROVIDER_DISPLAY_NAMES } from "../providers";
+import { useKeyboard } from "@opentui/react";
 import ChatTextbox from "./ChatTextbox";
 import Message from "./Message";
 import ToolUseRequestDialog from "./ToolUseRequestDialog";
@@ -59,6 +60,16 @@ const CodingAgent = (props: Props) => {
   const pendingAskUserQuestionRef = useRef<{
     resolve: (answers: QuestionAnswer[]) => void;
   } | null>(null);
+  const isLoadingRef = useRef(false);
+  isLoadingRef.current = isLoading;
+
+  useKeyboard(
+    useCallback((key) => {
+      if (key.name === "escape" && isLoadingRef.current) {
+        session.cancel();
+      }
+    }, [session]),
+  );
 
   useEffect(() => {
     session.canUseToolHandler = async (request: ToolUseRequest) => {
