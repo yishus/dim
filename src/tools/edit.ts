@@ -54,4 +54,8 @@ const callFunction = async (args: argsType, _config: ToolConfig) => {
   return `Successfully replaced ${replacedCount} occurrence${replacedCount > 1 ? "s" : ""} in ${path}`;
 };
 
-export default { definition, callFunction } as Tool<typeof editSchema>;
+const requiresPermission = true;
+
+const describeInput = (input: argsType): string => `file at path: ${input.path}`;
+
+export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof editSchema>;

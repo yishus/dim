@@ -15,7 +15,7 @@ import {
 import { Agent } from "./agent";
 import { Provider } from "./providers";
 import {
-  toolUseDescription,
+  getToolDescription,
   type ToolInputMap,
   type ToolName,
   type AskUserQuestionInput,
@@ -152,7 +152,7 @@ export class Session {
   }
 
   async handleToolUseRequest(toolName: string, input: unknown) {
-    const description = toolUseDescription(toolName as ToolName, input);
+    const description = getToolDescription(toolName as ToolName, input);
     const canUse = await this.canUseToolHandler?.({
       toolName,
       description,

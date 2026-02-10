@@ -10,6 +10,7 @@ import {
   ALL_MODELS,
   Provider,
 } from "../session";
+import { PROVIDER_DISPLAY_NAMES } from "../providers";
 import ChatTextbox from "./ChatTextbox";
 import Message from "./Message";
 import ToolUseRequestDialog from "./ToolUseRequestDialog";
@@ -121,12 +122,7 @@ const CodingAgent = (props: Props) => {
     setCurrentModel(model);
     setCurrentProvider(provider);
     const modelInfo = ALL_MODELS.find((m) => m.id === model);
-    const providerName =
-      provider === Provider.Anthropic
-        ? "Anthropic"
-        : provider === Provider.OpenAI
-          ? "OpenAI"
-          : "Google";
+    const providerName = PROVIDER_DISPLAY_NAMES[provider];
     const modelName = modelInfo?.name ?? model;
     setMessages((prev) => [
       ...prev,
@@ -160,12 +156,7 @@ const CodingAgent = (props: Props) => {
 
   const currentModelName =
     ALL_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
-  const currentProviderName =
-    currentProvider === Provider.Anthropic
-      ? "Anthropic"
-      : currentProvider === Provider.OpenAI
-        ? "OpenAI"
-        : "Google";
+  const currentProviderName = PROVIDER_DISPLAY_NAMES[currentProvider];
 
   return (
     <box style={{ padding: 1 }}>

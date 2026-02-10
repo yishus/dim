@@ -13,6 +13,7 @@ import type {
   MessageDelta,
 } from "../ai";
 import type { Tool } from "../tools";
+import type { ProviderInterface, StreamOptions } from "./";
 
 export type OpenAIModelId = "gpt-5.2-codex" | "gpt-5.1-codex-mini" | "gpt-4o-mini";
 
@@ -25,17 +26,10 @@ export const AVAILABLE_OPENAI_MODELS: { id: OpenAIModelId; name: string }[] = [
   { id: "gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini" },
 ];
 
-export interface OpenAIStreamOptions {
-  apiKey?: string;
-  tools?: Tool<any>[];
-  systemPrompt?: string;
-  model?: OpenAIModelId;
-}
-
-export namespace OpenAIProvider {
-  export const prompt = async (
+export const OpenAIProvider: ProviderInterface = {
+  prompt: async (
     input: MessageParam[],
-    options?: OpenAIStreamOptions,
+    options?: StreamOptions,
   ) => {
     const {
       apiKey,
@@ -50,18 +44,18 @@ export namespace OpenAIProvider {
 
     const client = new OpenAI({ apiKey });
     const response = await client.responses.create({
-      model,
+      model: model as OpenAIModelId,
       instructions: systemPrompt,
       input: input.map(message_param_to_input_item).flat(),
       tools: tools?.map(tool_to_function_tool),
     });
 
     return response_to_message_response(response);
-  };
+  },
 
-  export const stream = (
+  stream: (
     input: MessageParam[],
-    options?: OpenAIStreamOptions,
+    options?: StreamOptions,
   ) => {
     const {
       apiKey,
@@ -77,7 +71,7 @@ export namespace OpenAIProvider {
     const client = new OpenAI({ apiKey });
 
     const streamResponse = client.responses.create({
-      model,
+      model: model as OpenAIModelId,
       instructions: systemPrompt,
       input: input.map(message_param_to_input_item).flat(),
       tools: tools?.map(tool_to_function_tool),
@@ -139,9 +133,10 @@ export namespace OpenAIProvider {
         resolveStreamComplete();
       },
     };
-  };
+  },
+};
 
-  const process_stream_event = (
+const process_stream_event = (
     event: ResponseStreamEvent,
     functionCalls: Map<
       string,
@@ -335,4 +330,3 @@ export namespace OpenAIProvider {
       },
     };
   };
-}

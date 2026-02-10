@@ -34,4 +34,8 @@ const callFunction = async (args: argsType, _config: ToolConfig) => {
   return `Successfully wrote ${content.length} characters to ${path}`;
 };
 
-export default { definition, callFunction } as Tool<typeof writeSchema>;
+const requiresPermission = true;
+
+const describeInput = (input: argsType): string => `file at path: ${input.path}`;
+
+export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof writeSchema>;

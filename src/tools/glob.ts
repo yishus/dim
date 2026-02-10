@@ -52,4 +52,8 @@ const callFunction = async (args: ArgsType, _config: ToolConfig) => {
   return matches.map((m) => m.path).join("\n");
 };
 
-export default { definition, callFunction } as Tool<typeof globSchema>;
+const requiresPermission = false;
+
+const describeInput = (input: ArgsType): string => `pattern: ${input.pattern}`;
+
+export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof globSchema>;

@@ -62,6 +62,13 @@ const callFunction = async (_args: AskUserQuestionInput, _config: ToolConfig): P
   return "Error: ask_user_question should be handled by the agent, not called directly.";
 };
 
-export default { definition, callFunction } as Tool<
+const requiresPermission = false;
+
+const describeInput = (input: AskUserQuestionInput): string => {
+  const questionCount = input.questions.length;
+  return `${questionCount} question${questionCount > 1 ? "s" : ""}`;
+};
+
+export default { definition, callFunction, requiresPermission, describeInput } as Tool<
   typeof askUserQuestionSchema
 >;

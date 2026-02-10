@@ -21,6 +21,8 @@ export interface Tool<T extends TSchema> {
     input_schema: T;
   };
   callFunction: (args: Static<T>, config: ToolConfig) => Promise<string>;
+  requiresPermission: boolean;
+  describeInput: (input: Static<T>) => string;
 }
 
 const tools = { askUserQuestion, bash, edit, glob, grep, read, webFetch, write };
@@ -48,49 +50,13 @@ export async function callTool<T extends ToolName>(
   }
 }
 
-export const requestToolUsePermission: Record<ToolName, boolean> = {
-  askUserQuestion: false, // Handled separately via askUserQuestionHandler
-  bash: true,
-  edit: true,
-  glob: false,
-  grep: false,
-  read: false,
-  webFetch: true,
-  write: true,
-};
+export function getToolPermission(name: ToolName): boolean {
+  return tools[name].requiresPermission;
+}
 
-export const toolUseDescription = (
-  toolName: ToolName,
-  input: unknown,
-): string => {
-  switch (toolName) {
-    case "askUserQuestion":
-      const askInput = input as ToolInputMap["askUserQuestion"];
-      const questionCount = askInput.questions.length;
-      return `${questionCount} question${questionCount > 1 ? "s" : ""}`;
-    case "bash":
-      const bashInput = input as ToolInputMap["bash"];
-      return bashInput.command;
-    case "edit":
-      const editInput = input as ToolInputMap["edit"];
-      return `file at path: ${editInput.path}`;
-    case "glob":
-      const globInput = input as ToolInputMap["glob"];
-      return `pattern: ${globInput.pattern}`;
-    case "grep":
-      const grepInput = input as ToolInputMap["grep"];
-      return `pattern: ${grepInput.pattern}`;
-    case "read":
-      const readInput = input as ToolInputMap["read"];
-      return `file at path: ${readInput.path}`;
-    case "webFetch":
-      const webFetchInput = input as ToolInputMap["webFetch"];
-      return `URL: ${webFetchInput.url}`;
-    case "write":
-      const writeInput = input as ToolInputMap["write"];
-      return `file at path: ${writeInput.path}`;
-  }
-};
+export function getToolDescription(name: ToolName, input: unknown): string {
+  return (tools[name] as Tool<any>).describeInput(input);
+}
 
 export type {
   AskUserQuestionInput,

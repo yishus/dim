@@ -1,6 +1,6 @@
-export const isPrintableASCII = (str: string) => /^[\x20-\x7E]*$/.test(str);
+import { DIFF_CONTEXT_LINES } from "./constants";
 
-const CONTEXT_LINES = 3;
+export const isPrintableASCII = (str: string) => /^[\x20-\x7E]*$/.test(str);
 
 interface Hunk {
   oldStart: number;
@@ -31,7 +31,7 @@ export function generateEditDiff(
   const newLines = newContent.split("\n");
 
   const diffOps = computeDiffOps(oldLines, newLines);
-  const hunks = buildHunks(diffOps, CONTEXT_LINES);
+  const hunks = buildHunks(diffOps, DIFF_CONTEXT_LINES);
 
   if (hunks.length === 0) {
     return "";
@@ -60,7 +60,7 @@ export function generateWriteDiff(
   const newLines = newContent.split("\n");
 
   const diffOps = computeDiffOps(oldLines, newLines);
-  const hunks = buildHunks(diffOps, CONTEXT_LINES);
+  const hunks = buildHunks(diffOps, DIFF_CONTEXT_LINES);
 
   if (hunks.length === 0) {
     return "";

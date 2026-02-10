@@ -13,6 +13,7 @@ import type {
   MessageDelta,
 } from "../ai";
 import type { Tool } from "../tools";
+import type { ProviderInterface, StreamOptions } from "./";
 
 export type GoogleModelId =
   | "gemini-3-flash-preview"
@@ -30,17 +31,10 @@ export const AVAILABLE_GOOGLE_MODELS: { id: GoogleModelId; name: string }[] = [
   { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
 ];
 
-export interface GoogleStreamOptions {
-  apiKey?: string;
-  tools?: Tool<any>[];
-  systemPrompt?: string;
-  model?: GoogleModelId;
-}
-
-export namespace GoogleProvider {
-  export const prompt = async (
+export const GoogleProvider: ProviderInterface = {
+  prompt: async (
     input: MessageParam[],
-    options?: GoogleStreamOptions,
+    options?: StreamOptions,
   ) => {
     const { apiKey, tools, model = DEFAULT_GOOGLE_MODEL } = options || {};
 
@@ -50,7 +44,7 @@ export namespace GoogleProvider {
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model,
+      model: model as GoogleModelId,
       contents: input.map(message_param_to_google_content),
       config: {
         tools: tools
@@ -61,11 +55,11 @@ export namespace GoogleProvider {
 
     const parts = response.candidates?.[0]?.content?.parts || [];
     return google_response_to_message_response(parts, response.usageMetadata);
-  };
+  },
 
-  export const stream = (
+  stream: (
     input: MessageParam[],
-    options?: GoogleStreamOptions,
+    options?: StreamOptions,
   ) => {
     const {
       apiKey,
@@ -80,7 +74,7 @@ export namespace GoogleProvider {
 
     const ai = new GoogleGenAI({ apiKey });
     const streamResponse = ai.models.generateContentStream({
-      model,
+      model: model as GoogleModelId,
       contents: input.map(message_param_to_google_content),
       config: {
         tools: tools
@@ -132,9 +126,10 @@ export namespace GoogleProvider {
         resolveStreamComplete();
       },
     };
-  };
+  },
+};
 
-  const tool_to_function_declaration = (
+const tool_to_function_declaration = (
     tool: Tool<any>,
   ): FunctionDeclaration => {
     return {
@@ -230,4 +225,3 @@ export namespace GoogleProvider {
       },
     };
   };
-}

@@ -1,5 +1,6 @@
 import { Type, type Static } from "typebox";
 
+import { DEFAULT_BASH_TIMEOUT_MS } from "../constants";
 import type { Tool, ToolConfig } from "./";
 
 // Patterns for destructive commands that should be blocked
@@ -112,7 +113,7 @@ const definition = {
 };
 
 const callFunction = async (args: argsType, _config: ToolConfig) => {
-  const { command, timeout = 30000 } = args;
+  const { command, timeout = DEFAULT_BASH_TIMEOUT_MS } = args;
 
   // Check for destructive commands
   const blockReason = checkDestructiveCommand(command);
@@ -157,4 +158,8 @@ const callFunction = async (args: argsType, _config: ToolConfig) => {
   }
 };
 
-export default { definition, callFunction } as Tool<typeof bashSchema>;
+const requiresPermission = true;
+
+const describeInput = (input: argsType): string => input.command;
+
+export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof bashSchema>;

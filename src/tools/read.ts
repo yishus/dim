@@ -3,9 +3,8 @@ import { readFile, stat } from "fs/promises";
 import { createInterface } from "readline/promises";
 import { Type, type Static } from "typebox";
 
+import { MAX_FILE_SIZE_BYTES } from "../constants";
 import type { Tool, ToolConfig } from "./";
-
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 const readSchema = Type.Object({
   path: Type.String({
@@ -74,4 +73,8 @@ const callFunction = async (args: argsType, _config: ToolConfig) => {
   }
 };
 
-export default { definition, callFunction } as Tool<typeof readSchema>;
+const requiresPermission = false;
+
+const describeInput = (input: argsType): string => `file at path: ${input.path}`;
+
+export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof readSchema>;

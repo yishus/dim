@@ -32,14 +32,17 @@ const App = ({ onExit }: AppProps) => {
         />
       )}
       {sessionState == "started" && (
-        <CodingAgent session={session} userPrompt={initialPrompt} onExit={onExit} />
+        <CodingAgent
+          session={session}
+          userPrompt={initialPrompt}
+          onExit={onExit}
+        />
       )}
     </>
   );
 };
 
 const renderer = await createCliRenderer();
-renderer.console.show();
 
 const handleExit = () => {
   renderer.destroy();

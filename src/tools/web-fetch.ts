@@ -41,7 +41,7 @@ const callFunction = async (args: argsType, config: ToolConfig) => {
     throw new Error(`HTTP error! Status: ${response.status}`);
   } else {
     const td = new turndown();
-    const markdown = td.turndown(response.text());
+    const markdown = td.turndown(await response.text());
     const model = SMALL_MODELS[provider];
     const agent = new Agent(model, provider);
     const agentMessage = await agent.prompt(`${prompt}\n\n${markdown}`);
@@ -49,4 +49,8 @@ const callFunction = async (args: argsType, config: ToolConfig) => {
   }
 };
 
-export default { definition, callFunction } as Tool<typeof webFetchSchema>;
+const requiresPermission = true;
+
+const describeInput = (input: argsType): string => `URL: ${input.url}`;
+
+export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof webFetchSchema>;

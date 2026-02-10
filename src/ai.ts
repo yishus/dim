@@ -1,11 +1,5 @@
-import {
-  AnthropicProvider,
-  type AnthropicModelId,
-} from "./providers/anthropic";
-import { GoogleProvider, type GoogleModelId } from "./providers/google";
-import { OpenAIProvider, type OpenAIModelId } from "./providers/openai";
 import { AuthStorage } from "./auth-storage";
-import { Provider, SMALL_MODELS } from "./providers";
+import { Provider, providers, SMALL_MODELS } from "./providers";
 import tools from "./tools";
 
 export {
@@ -14,6 +8,10 @@ export {
 } from "./providers/anthropic";
 export { AVAILABLE_GOOGLE_MODELS } from "./providers/google";
 export { AVAILABLE_OPENAI_MODELS } from "./providers/openai";
+
+import type { AnthropicModelId } from "./providers/anthropic";
+import type { GoogleModelId } from "./providers/google";
+import type { OpenAIModelId } from "./providers/openai";
 
 export type ModelId = AnthropicModelId | GoogleModelId | OpenAIModelId;
 
@@ -96,36 +94,12 @@ export namespace AI {
     model?: ModelId,
   ) => {
     const authStorage = new AuthStorage();
-
-    switch (provider) {
-      case Provider.Anthropic: {
-        const apiKey = authStorage.get(Provider.Anthropic);
-        const response = AnthropicProvider.prompt(input, {
-          apiKey,
-          tools: Object.values(tools),
-          model: model as AnthropicModelId,
-        });
-        return response;
-      }
-      case Provider.Google: {
-        const apiKey = authStorage.get(Provider.Google);
-        const response = GoogleProvider.prompt(input, {
-          apiKey,
-          tools: Object.values(tools),
-          model: model as GoogleModelId,
-        });
-        return response;
-      }
-      case Provider.OpenAI: {
-        const apiKey = authStorage.get(Provider.OpenAI);
-        const response = OpenAIProvider.prompt(input, {
-          apiKey,
-          tools: Object.values(tools),
-          model: model as OpenAIModelId,
-        });
-        return response;
-      }
-    }
+    const apiKey = authStorage.get(provider);
+    return providers[provider].prompt(input, {
+      apiKey,
+      tools: Object.values(tools),
+      model,
+    });
   };
 
   /**
@@ -162,38 +136,12 @@ export namespace AI {
     model?: ModelId,
   ) => {
     const authStorage = new AuthStorage();
-
-    switch (provider) {
-      case Provider.Anthropic: {
-        const apiKey = authStorage.get(Provider.Anthropic);
-        const stream = AnthropicProvider.stream(input, {
-          apiKey,
-          systemPrompt,
-          tools: Object.values(tools),
-          model: model as AnthropicModelId,
-        });
-        return stream;
-      }
-      case Provider.Google: {
-        const apiKey = authStorage.get(Provider.Google);
-        const stream = GoogleProvider.stream(input, {
-          apiKey,
-          systemPrompt,
-          tools: Object.values(tools),
-          model: model as GoogleModelId,
-        });
-        return stream;
-      }
-      case Provider.OpenAI: {
-        const apiKey = authStorage.get(Provider.OpenAI);
-        const stream = OpenAIProvider.stream(input, {
-          apiKey,
-          systemPrompt,
-          tools: Object.values(tools),
-          model: model as OpenAIModelId,
-        });
-        return stream;
-      }
-    }
+    const apiKey = authStorage.get(provider);
+    return providers[provider].stream(input, {
+      apiKey,
+      systemPrompt,
+      tools: Object.values(tools),
+      model,
+    });
   };
 }

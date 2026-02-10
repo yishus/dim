@@ -11,7 +11,7 @@ import type {
   MessageDelta,
   ContentBlock,
 } from "../ai";
-import type { Tool } from "../tools";
+import type { ProviderInterface, StreamOptions } from "./";
 
 export type AnthropicModelId =
   | "claude-sonnet-4-5-20250929"
@@ -32,17 +32,10 @@ export const AVAILABLE_ANTHROPIC_MODELS: {
   { id: "claude-opus-4-20250514", name: "Opus" },
 ];
 
-export interface AnthropicStreamOptions {
-  apiKey?: string;
-  tools?: Tool<any>[];
-  systemPrompt?: string;
-  model?: AnthropicModelId;
-}
-
-export namespace AnthropicProvider {
-  export const prompt = async (
+export const AnthropicProvider: ProviderInterface = {
+  prompt: async (
     input: MessageParam[],
-    options?: AnthropicStreamOptions,
+    options?: StreamOptions,
   ) => {
     const { apiKey, tools, model = DEFAULT_ANTHROPIC_MODEL } = options || {};
     const client = new Anthropic({
@@ -53,15 +46,15 @@ export namespace AnthropicProvider {
       max_tokens: 16384,
       messages: input.map(message_param_to_anthropic_message_param),
       tools: tools?.map((tool) => tool.definition),
-      model,
+      model: model as AnthropicModelId,
     });
 
     return anthropic_message_to_message_response(response);
-  };
+  },
 
-  export const stream = (
+  stream: (
     input: MessageParam[],
-    options?: AnthropicStreamOptions,
+    options?: StreamOptions,
   ) => {
     const {
       apiKey,
@@ -77,7 +70,7 @@ export namespace AnthropicProvider {
       max_tokens: 16384,
       messages: input.map(message_param_to_anthropic_message_param),
       tools: tools?.map((tool) => tool.definition),
-      model,
+      model: model as AnthropicModelId,
       system: systemPrompt,
     });
 
@@ -92,9 +85,10 @@ export namespace AnthropicProvider {
         }
       },
     };
-  };
+  },
+};
 
-  const anthropic_delta_to_message_delta = (
+const anthropic_delta_to_message_delta = (
     event: RawMessageStreamEvent,
   ): MessageDelta => {
     switch (event.type) {
@@ -181,4 +175,3 @@ export namespace AnthropicProvider {
       },
     };
   };
-}
