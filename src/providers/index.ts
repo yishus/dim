@@ -1,5 +1,10 @@
-import type { MessageParam, MessageResponse, MessageDelta, ModelId } from "../ai";
-import type { Tool } from "../tools";
+import type {
+  MessageParam,
+  MessageResponse,
+  MessageDelta,
+  ModelId,
+} from "../ai";
+import type { ToolDefinition } from "../tools";
 import { SMALL_ANTHROPIC_MODEL, AnthropicProvider } from "./anthropic";
 import { SMALL_GOOGLE_MODEL, GoogleProvider } from "./google";
 import { SMALL_OPENAI_MODEL, OpenAIProvider } from "./openai";
@@ -12,7 +17,7 @@ export enum Provider {
 
 export interface StreamOptions {
   apiKey?: string;
-  tools?: Tool<any>[];
+  tools?: ToolDefinition[];
   systemPrompt?: string;
   model?: ModelId;
 }
@@ -23,7 +28,10 @@ export interface StreamResult {
 }
 
 export interface ProviderInterface {
-  prompt(input: MessageParam[], options?: StreamOptions): Promise<MessageResponse>;
+  prompt(
+    input: MessageParam[],
+    options?: StreamOptions,
+  ): Promise<MessageResponse>;
   stream(input: MessageParam[], options?: StreamOptions): StreamResult;
 }
 

@@ -41,7 +41,7 @@ const definition = {
   name: "grep",
   description:
     "Search for patterns in file contents using ripgrep (rg) or grep. Supports regex patterns and file filtering.",
-  input_schema: grepSchema,
+  inputSchema: grepSchema,
 };
 
 async function hasCommand(cmd: string): Promise<boolean> {
@@ -119,6 +119,6 @@ const callFunction = async (args: ArgsType, _config: ToolConfig) => {
 
 const requiresPermission = false;
 
-const describeInput = (input: ArgsType): string => `pattern: ${input.pattern}`;
+const describeUse = (input: ArgsType): string => `pattern: ${input.pattern}`;
 
-export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof grepSchema>;
+export default { definition, callFunction, requiresPermission, describeUse } as Tool<typeof grepSchema>;

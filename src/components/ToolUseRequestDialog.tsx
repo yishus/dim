@@ -2,7 +2,6 @@ import { useRef } from "react";
 import {
   type SelectRenderable,
   type SelectOption,
-  createTextAttributes,
 } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import type { ToolUseRequest } from "../session";
@@ -19,7 +18,6 @@ const toolUseRequestOptions: SelectOption[] = [
   },
 ];
 
-const boldAttr = createTextAttributes({ bold: true });
 
 interface Props {
   request: ToolUseRequest;

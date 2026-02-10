@@ -30,7 +30,7 @@ const definition = {
   name: "read",
   description:
     "Reads a file from the local filesystem. You can access any file directly by using this tool.",
-  input_schema: readSchema,
+  inputSchema: readSchema,
 };
 
 const callFunction = async (args: argsType, _config: ToolConfig) => {
@@ -75,6 +75,6 @@ const callFunction = async (args: argsType, _config: ToolConfig) => {
 
 const requiresPermission = false;
 
-const describeInput = (input: argsType): string => `file at path: ${input.path}`;
+const describeUse = (input: argsType): string => `file at path: ${input.path}`;
 
-export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof readSchema>;
+export default { definition, callFunction, requiresPermission, describeUse } as Tool<typeof readSchema>;

@@ -1,6 +1,7 @@
 import type { Static, TSchema } from "typebox";
 
 import { Provider } from "../providers";
+import type { ExtensionRegistry, ExtensionToolDefinition } from "../extensions";
 import askUserQuestion from "./ask-user-question";
 import bash from "./bash";
 import edit from "./edit";
@@ -10,38 +11,70 @@ import read from "./read";
 import webFetch from "./web-fetch";
 import write from "./write";
 
+export type {
+  AskUserQuestionInput,
+  QuestionInput,
+  OptionInput,
+} from "./ask-user-question";
+
 export interface ToolConfig {
   provider: Provider;
+}
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  inputSchema: TSchema;
 }
 
 export interface Tool<T extends TSchema> {
   definition: {
     name: string;
     description: string;
-    input_schema: T;
+    inputSchema: T;
   };
   callFunction: (args: Static<T>, config: ToolConfig) => Promise<string>;
   requiresPermission: boolean;
-  describeInput: (input: Static<T>) => string;
+  describeUse: (input: Static<T>) => string;
 }
 
-const tools = { askUserQuestion, bash, edit, glob, grep, read, webFetch, write };
+const tools = {
+  askUserQuestion,
+  bash,
+  edit,
+  glob,
+  grep,
+  read,
+  webFetch,
+  write,
+};
 
 export type ToolName = keyof typeof tools;
 
 // Type map that extracts input types from each tool
 export type ToolInputMap = {
-  [K in ToolName]: Static<(typeof tools)[K]["definition"]["input_schema"]>;
+  [K in ToolName]: Static<(typeof tools)[K]["definition"]["inputSchema"]>;
 };
 
+// Extension tools storage
+let extensionTools = new Map<string, ExtensionToolDefinition>();
+
+export function registerExtensionTools(registry: ExtensionRegistry): void {
+  extensionTools = registry.tools;
+}
+
 // Typed call function that preserves the relationship
-export async function callTool<T extends ToolName>(
-  name: T,
-  input: ToolInputMap[T],
+export async function callTool(
+  name: string,
+  input: unknown,
   config: ToolConfig,
 ): Promise<string> {
   try {
-    return await tools[name].callFunction(input as never, config);
+    const tool = tools[name as ToolName] ?? extensionTools.get(name);
+    if (tool) {
+      return await tool.callFunction(input as never, config);
+    }
+    return `Error: Tool "${name}" not found.`;
   } catch (error) {
     if (error instanceof Error) {
       return `Error: ${error.message}`;
@@ -50,18 +83,24 @@ export async function callTool<T extends ToolName>(
   }
 }
 
-export function getToolPermission(name: ToolName): boolean {
-  return tools[name].requiresPermission;
+export function getToolPermission(name: string): boolean {
+  const tool = tools[name as ToolName] ?? extensionTools.get(name);
+  return tool.requiresPermission;
 }
 
-export function getToolDescription(name: ToolName, input: unknown): string {
-  return (tools[name] as Tool<any>).describeInput(input);
+export function getToolDescription(name: string, input: unknown): string {
+  const tool = tools[name as ToolName] ?? extensionTools.get(name);
+  return tool.describeUse(input as never);
 }
 
-export type {
-  AskUserQuestionInput,
-  QuestionInput,
-  OptionInput,
-} from "./ask-user-question";
+export function isKnownTool(name: string): boolean {
+  return name in tools || extensionTools.has(name);
+}
+
+export function getAllToolDefinitions(): ToolDefinition[] {
+  const builtins = Object.values(tools).map((tool) => tool.definition);
+  const extensions = Object.values(extensionTools);
+  return [...builtins, ...extensions];
+}
 
 export default tools;

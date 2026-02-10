@@ -19,7 +19,7 @@ const definition = {
   name: "write",
   description:
     "Writes content to a file at the specified path. Creates the file if it doesn't exist, or overwrites it if it does. Parent directories are created automatically if needed.",
-  input_schema: writeSchema,
+  inputSchema: writeSchema,
 };
 
 const callFunction = async (args: argsType, _config: ToolConfig) => {
@@ -36,6 +36,6 @@ const callFunction = async (args: argsType, _config: ToolConfig) => {
 
 const requiresPermission = true;
 
-const describeInput = (input: argsType): string => `file at path: ${input.path}`;
+const describeUse = (input: argsType): string => `file at path: ${input.path}`;
 
-export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof writeSchema>;
+export default { definition, callFunction, requiresPermission, describeUse } as Tool<typeof writeSchema>;

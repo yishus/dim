@@ -13,13 +13,14 @@ import { THEME } from "../theme";
 
 const execAsync = promisify(exec);
 
-const slashCommands = [
+const defaultSlashCommands = [
   { name: "/model", description: "Select AI model", value: "model" },
   { name: "/exit", description: "Exit the application", value: "exit" },
 ];
 
 interface Props {
   onSubmit: (text: string) => void;
+  commands?: Array<{ name: string; description: string; value: string }>;
   minHeight?: number;
   maxHeight?: number;
   placeholder?: string;
@@ -28,10 +29,13 @@ interface Props {
 const ChatTextbox = (props: Props) => {
   const {
     onSubmit,
+    commands,
     minHeight = 1,
     maxHeight = 6,
     placeholder = "Ask Anything...",
   } = props;
+
+  const slashCommands = commands ?? defaultSlashCommands;
 
   const textareaRef = useRef<TextareaRenderable>(null);
   const selectRef = useRef<SelectRenderable>(null);

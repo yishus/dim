@@ -51,7 +51,7 @@ const definition = {
   name: "askUserQuestion",
   description:
     "Ask the user questions to gather preferences, clarify ambiguous instructions, get decisions on implementation choices, or offer choices about what direction to take. Each question can have 2-4 options, and users can always provide custom text input via 'Other'.",
-  input_schema: askUserQuestionSchema,
+  inputSchema: askUserQuestionSchema,
 };
 
 // The actual call function returns the user's answers, which are injected
@@ -64,11 +64,11 @@ const callFunction = async (_args: AskUserQuestionInput, _config: ToolConfig): P
 
 const requiresPermission = false;
 
-const describeInput = (input: AskUserQuestionInput): string => {
+const describeUse = (input: AskUserQuestionInput): string => {
   const questionCount = input.questions.length;
   return `${questionCount} question${questionCount > 1 ? "s" : ""}`;
 };
 
-export default { definition, callFunction, requiresPermission, describeInput } as Tool<
+export default { definition, callFunction, requiresPermission, describeUse } as Tool<
   typeof askUserQuestionSchema
 >;

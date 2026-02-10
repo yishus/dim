@@ -12,7 +12,7 @@ import type {
   MessageParam,
   MessageDelta,
 } from "../ai";
-import type { Tool } from "../tools";
+import type { ToolDefinition } from "../tools";
 import type { ProviderInterface, StreamOptions } from "./";
 
 export type GoogleModelId =
@@ -32,10 +32,7 @@ export const AVAILABLE_GOOGLE_MODELS: { id: GoogleModelId; name: string }[] = [
 ];
 
 export const GoogleProvider: ProviderInterface = {
-  prompt: async (
-    input: MessageParam[],
-    options?: StreamOptions,
-  ) => {
+  prompt: async (input: MessageParam[], options?: StreamOptions) => {
     const { apiKey, tools, model = DEFAULT_GOOGLE_MODEL } = options || {};
 
     if (!apiKey) {
@@ -57,10 +54,7 @@ export const GoogleProvider: ProviderInterface = {
     return google_response_to_message_response(parts, response.usageMetadata);
   },
 
-  stream: (
-    input: MessageParam[],
-    options?: StreamOptions,
-  ) => {
+  stream: (input: MessageParam[], options?: StreamOptions) => {
     const {
       apiKey,
       systemPrompt,
@@ -130,98 +124,98 @@ export const GoogleProvider: ProviderInterface = {
 };
 
 const tool_to_function_declaration = (
-    tool: Tool<any>,
-  ): FunctionDeclaration => {
-    return {
-      name: tool.definition.name,
-      description: tool.definition.description,
-      parameters: tool.definition.input_schema,
-    };
+  tool: ToolDefinition,
+): FunctionDeclaration => {
+  return {
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.inputSchema,
   };
+};
 
-  const message_param_to_google_content = (message: MessageParam): Content => {
-    const parts: Part[] = [];
+const message_param_to_google_content = (message: MessageParam): Content => {
+  const parts: Part[] = [];
 
-    for (const content of message.content) {
-      if (content.type === "text") {
-        parts.push({
-          text: content.text,
-          thoughtSignature: content.metadata?.thoughtSignature as
-            | string
-            | undefined,
-        });
-      } else if (content.type === "tool_use") {
-        parts.push({
-          functionCall: {
-            name: content.name,
-            id: content.id,
-            args: content.input as Record<string, unknown>,
-          },
-          thoughtSignature: content.metadata?.thoughtSignature as
-            | string
-            | undefined,
-        });
-      } else if (content.type === "tool_result") {
-        const textContent = content.content
-          .filter((c) => c.type === "text")
-          .map((c) => c.text)
-          .join("\n");
-        parts.push({
-          functionResponse: {
-            name: content.name,
-            id: content.tool_use_id,
-            response: { result: textContent },
-          },
-        });
-      }
+  for (const content of message.content) {
+    if (content.type === "text") {
+      parts.push({
+        text: content.text,
+        thoughtSignature: content.metadata?.thoughtSignature as
+          | string
+          | undefined,
+      });
+    } else if (content.type === "tool_use") {
+      parts.push({
+        functionCall: {
+          name: content.name,
+          id: content.id,
+          args: content.input as Record<string, unknown>,
+        },
+        thoughtSignature: content.metadata?.thoughtSignature as
+          | string
+          | undefined,
+      });
+    } else if (content.type === "tool_result") {
+      const textContent = content.content
+        .filter((c) => c.type === "text")
+        .map((c) => c.text)
+        .join("\n");
+      parts.push({
+        functionResponse: {
+          name: content.name,
+          id: content.tool_use_id,
+          response: { result: textContent },
+        },
+      });
+    }
+  }
+
+  return {
+    role: message.role === "assistant" ? "model" : "user",
+    parts,
+  };
+};
+
+const google_response_to_message_response = (
+  parts: Part[],
+  usage: GenerateContentResponseUsageMetadata = {},
+): MessageResponse => {
+  const content: ContentBlock[] = [];
+
+  for (const part of parts) {
+    if (part.text) {
+      content.push({
+        type: "text",
+        text: part.text,
+        metadata: part.thoughtSignature
+          ? { thoughtSignature: part.thoughtSignature }
+          : undefined,
+      });
     }
 
-    return {
-      role: message.role === "assistant" ? "model" : "user",
-      parts,
-    };
-  };
-
-  const google_response_to_message_response = (
-    parts: Part[],
-    usage: GenerateContentResponseUsageMetadata = {},
-  ): MessageResponse => {
-    const content: ContentBlock[] = [];
-
-    for (const part of parts) {
-      if (part.text) {
-        content.push({
-          type: "text",
-          text: part.text,
-          metadata: part.thoughtSignature
-            ? { thoughtSignature: part.thoughtSignature }
-            : undefined,
-        });
-      }
-
-      if (part.functionCall) {
-        const { args, id, name } = part.functionCall;
-        if (!args || !name) continue;
-        content.push({
-          type: "tool_use",
-          id: id ?? crypto.randomUUID(),
-          name,
-          input: args,
-          metadata: part.thoughtSignature
-            ? { thoughtSignature: part.thoughtSignature }
-            : undefined,
-        });
-      }
+    if (part.functionCall) {
+      const { args, id, name } = part.functionCall;
+      if (!args || !name) continue;
+      content.push({
+        type: "tool_use",
+        id: id ?? crypto.randomUUID(),
+        name,
+        input: args,
+        metadata: part.thoughtSignature
+          ? { thoughtSignature: part.thoughtSignature }
+          : undefined,
+      });
     }
+  }
 
-    return {
-      message: {
-        role: "assistant",
-        content,
-      },
-      usage: {
-        input_tokens: usage.promptTokenCount || 0,
-        output_tokens: usage.candidatesTokenCount || 0,
-      },
-    };
+  return {
+    message: {
+      role: "assistant",
+      content,
+    },
+    usage: {
+      input_tokens: usage.promptTokenCount || 0,
+      output_tokens: usage.candidatesTokenCount || 0,
+    },
   };
+};

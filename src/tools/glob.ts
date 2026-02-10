@@ -21,7 +21,7 @@ const definition = {
   name: "glob",
   description:
     "Fast file pattern matching tool. Supports glob patterns like **/*.js or src/**/*.ts. Returns matching file paths sorted by modification time (most recent first).",
-  input_schema: globSchema,
+  inputSchema: globSchema,
 };
 
 const callFunction = async (args: ArgsType, _config: ToolConfig) => {
@@ -54,6 +54,6 @@ const callFunction = async (args: ArgsType, _config: ToolConfig) => {
 
 const requiresPermission = false;
 
-const describeInput = (input: ArgsType): string => `pattern: ${input.pattern}`;
+const describeUse = (input: ArgsType): string => `pattern: ${input.pattern}`;
 
-export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof globSchema>;
+export default { definition, callFunction, requiresPermission, describeUse } as Tool<typeof globSchema>;

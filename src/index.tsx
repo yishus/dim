@@ -7,7 +7,7 @@ import { Session } from "./session";
 import HomeScreen from "./components/HomeScreen";
 import CodingAgent from "./components/CodingAgent";
 
-const session = new Session();
+const session = await Session.create();
 
 interface AppProps {
   onExit: () => void;

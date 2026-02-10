@@ -28,7 +28,7 @@ type argsType = Static<typeof webFetchSchema>;
 const definition = {
   name: "webFetch",
   description,
-  input_schema: webFetchSchema,
+  inputSchema: webFetchSchema,
 };
 
 const callFunction = async (args: argsType, config: ToolConfig) => {
@@ -51,6 +51,6 @@ const callFunction = async (args: argsType, config: ToolConfig) => {
 
 const requiresPermission = true;
 
-const describeInput = (input: argsType): string => `URL: ${input.url}`;
+const describeUse = (input: argsType): string => `URL: ${input.url}`;
 
-export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof webFetchSchema>;
+export default { definition, callFunction, requiresPermission, describeUse } as Tool<typeof webFetchSchema>;

@@ -26,7 +26,7 @@ const definition = {
   name: "edit",
   description:
     "Performs exact string replacements in a file. The old_string must be unique in the file unless replace_all is true.",
-  input_schema: editSchema,
+  inputSchema: editSchema,
 };
 
 const callFunction = async (args: argsType, _config: ToolConfig) => {
@@ -56,6 +56,6 @@ const callFunction = async (args: argsType, _config: ToolConfig) => {
 
 const requiresPermission = true;
 
-const describeInput = (input: argsType): string => `file at path: ${input.path}`;
+const describeUse = (input: argsType): string => `file at path: ${input.path}`;
 
-export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof editSchema>;
+export default { definition, callFunction, requiresPermission, describeUse } as Tool<typeof editSchema>;

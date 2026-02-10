@@ -7,11 +7,13 @@ import type { Tool, ToolConfig } from "./";
 const destructivePatterns: { pattern: RegExp; reason: string }[] = [
   // Recursive deletion of root or home
   {
-    pattern: /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(-[a-zA-Z]*r[a-zA-Z]*\s+)?[~\/]\s*$/,
+    pattern:
+      /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(-[a-zA-Z]*r[a-zA-Z]*\s+)?[~\/]\s*$/,
     reason: "Recursive deletion of root or home directory",
   },
   {
-    pattern: /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(-[a-zA-Z]*f[a-zA-Z]*\s+)?[~\/]\s*$/,
+    pattern:
+      /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(-[a-zA-Z]*f[a-zA-Z]*\s+)?[~\/]\s*$/,
     reason: "Recursive deletion of root or home directory",
   },
   {
@@ -78,7 +80,8 @@ const destructivePatterns: { pattern: RegExp; reason: string }[] = [
     reason: "Hard reset to remote (discards local changes)",
   },
   {
-    pattern: /\bgit\s+clean\s+-[a-zA-Z]*f[a-zA-Z]*d|git\s+clean\s+-[a-zA-Z]*d[a-zA-Z]*f/,
+    pattern:
+      /\bgit\s+clean\s+-[a-zA-Z]*f[a-zA-Z]*d|git\s+clean\s+-[a-zA-Z]*d[a-zA-Z]*f/,
     reason: "Git clean with force (removes untracked files)",
   },
 ];
@@ -99,7 +102,7 @@ const bashSchema = Type.Object({
   timeout: Type.Optional(
     Type.Number({
       description: "Timeout in milliseconds (default: 30000)",
-    })
+    }),
   ),
 });
 
@@ -109,7 +112,7 @@ const definition = {
   name: "bash",
   description:
     "Executes a bash command and returns the output. Use this for running shell commands, scripts, and system operations.",
-  input_schema: bashSchema,
+  inputSchema: bashSchema,
 };
 
 const callFunction = async (args: argsType, _config: ToolConfig) => {
@@ -160,6 +163,11 @@ const callFunction = async (args: argsType, _config: ToolConfig) => {
 
 const requiresPermission = true;
 
-const describeInput = (input: argsType): string => input.command;
+const describeUse = (input: argsType): string => input.command;
 
-export default { definition, callFunction, requiresPermission, describeInput } as Tool<typeof bashSchema>;
+export default {
+  definition,
+  callFunction,
+  requiresPermission,
+  describeUse,
+} as Tool<typeof bashSchema>;

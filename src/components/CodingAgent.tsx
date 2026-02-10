@@ -27,6 +27,17 @@ interface Props {
 
 const CodingAgent = (props: Props) => {
   const { session, userPrompt, onExit } = props;
+
+  const extensionCommands = session.getExtensionCommands();
+  const allCommands = [
+    { name: "/model", description: "Select AI model", value: "model" },
+    { name: "/exit", description: "Exit the application", value: "exit" },
+    ...extensionCommands.map((cmd) => ({
+      name: cmd.name,
+      description: cmd.description,
+      value: cmd.value,
+    })),
+  ];
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [tokenCost, setTokenCost] = useState(0);
   const [inputTokens, setInputTokens] = useState(0);
@@ -147,6 +158,14 @@ const CodingAgent = (props: Props) => {
       setShowModelSelector(true);
       return;
     }
+    // Check extension commands
+    const extCmd = extensionCommands.find(
+      (cmd) => cmd.name === submittedText,
+    );
+    if (extCmd) {
+      extCmd.execute();
+      return;
+    }
     setMessages((prevMessages) => [
       ...prevMessages,
       { role: "user", text: submittedText },
@@ -190,7 +209,7 @@ const CodingAgent = (props: Props) => {
           />
         )}
       </scrollbox>
-      <ChatTextbox onSubmit={handleSubmit} minHeight={6} />
+      <ChatTextbox onSubmit={handleSubmit} commands={allCommands} minHeight={6} />
       <box
         style={{
           flexDirection: "row",

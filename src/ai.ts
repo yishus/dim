@@ -1,6 +1,6 @@
 import { AuthStorage } from "./auth-storage";
 import { Provider, providers, SMALL_MODELS } from "./providers";
-import tools from "./tools";
+import { type ToolDefinition } from "./tools";
 
 export {
   AVAILABLE_ANTHROPIC_MODELS,
@@ -92,12 +92,13 @@ export namespace AI {
     provider: Provider,
     input: MessageParam[],
     model?: ModelId,
+    tools?: ToolDefinition[],
   ) => {
     const authStorage = new AuthStorage();
     const apiKey = authStorage.get(provider);
     return providers[provider].prompt(input, {
       apiKey,
-      tools: Object.values(tools),
+      tools,
       model,
     });
   };
@@ -134,13 +135,14 @@ export namespace AI {
     input: MessageParam[],
     systemPrompt?: string,
     model?: ModelId,
+    tools?: ToolDefinition[],
   ) => {
     const authStorage = new AuthStorage();
     const apiKey = authStorage.get(provider);
     return providers[provider].stream(input, {
       apiKey,
       systemPrompt,
-      tools: Object.values(tools),
+      tools,
       model,
     });
   };

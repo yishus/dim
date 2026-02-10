@@ -16,13 +16,14 @@ import { Agent } from "./agent";
 import { Provider } from "./providers";
 import {
   getToolDescription,
+  registerExtensionTools,
   type ToolInputMap,
-  type ToolName,
   type AskUserQuestionInput,
 } from "./tools";
 import { generateEditDiff, generateWriteDiff } from "./helper";
 import { isErrnoException } from "./type-helper";
 import { TokenCostHelper } from "./token-cost";
+import { ExtensionLoader, type ExtensionRegistry } from "./extensions";
 
 export type { ModelId };
 export { Provider };
@@ -66,7 +67,7 @@ export interface QuestionAnswer {
 const SYSTEM_PROMPT_PATH = join(__dirname, "prompts/system_workflow.md");
 
 export class Session {
-  agent: Agent;
+  agent!: Agent;
   model: ModelId = DEFAULT_ANTHROPIC_MODEL;
   provider: Provider = Provider.Anthropic;
   eventEmitter = new EventEmitter();
@@ -76,8 +77,18 @@ export class Session {
   ) => Promise<QuestionAnswer[]>;
   memory: { [key: string]: any } = {};
   totalCost = 0;
+  private extensionRegistry?: ExtensionRegistry;
 
-  constructor() {
+  private constructor() {}
+
+  static async create(): Promise<Session> {
+    const session = new Session();
+
+    // Load extensions
+    const registry = await ExtensionLoader.loadAll();
+    session.extensionRegistry = registry;
+    registerExtensionTools(registry);
+
     // Create scratchpad directory if it doesn't exist
     const cwd = process.cwd();
     const scratchpadPath = join(
@@ -105,7 +116,8 @@ export class Session {
       }
       const readSystemPrompt = readFileSync(SYSTEM_PROMPT_PATH, "utf8");
       const isGitRepo = execSync("git rev-parse --is-inside-work-tree");
-      const modelName = ALL_MODELS.find((m) => m.id === this.model)?.name || "";
+      const modelName =
+        ALL_MODELS.find((m) => m.id === session.model)?.name || "";
       systemPrompt = readSystemPrompt
         .replace("$cwd", cwd)
         .replace("$isGitRepo", isGitRepo ? "true" : "false")
@@ -113,7 +125,7 @@ export class Session {
         .replace("$OSVersion", release())
         .replace("$date", new Date().toISOString().split("T")[0] || "")
         .replace("$model", modelName)
-        .replace("$modelId", this.model)
+        .replace("$modelId", session.model)
         .replace("$scratchpadPath", scratchpadPath)
         .replace(
           "$branch",
@@ -128,14 +140,39 @@ export class Session {
       if (!isErrnoException(err) || err.code !== "ENOENT") {
         throw err;
       }
-    } finally {
-      this.agent = new Agent(
-        this.model,
-        this.provider,
-        systemPrompt,
-        systemReminderStart,
-      );
     }
+
+    // Append extension system prompt additions
+    if (registry.systemPromptAdditions.length > 0) {
+      const extensionPrompts = registry.systemPromptAdditions.join("\n\n");
+      systemPrompt = systemPrompt
+        ? `${systemPrompt}\n\n${extensionPrompts}`
+        : extensionPrompts;
+    }
+
+    session.agent = new Agent(
+      session.model,
+      session.provider,
+      systemPrompt,
+      systemReminderStart,
+    );
+
+    return session;
+  }
+
+  getExtensionCommands(): Array<{
+    name: string;
+    description: string;
+    value: string;
+    execute: () => void | Promise<void>;
+  }> {
+    if (!this.extensionRegistry) return [];
+    return this.extensionRegistry.commands.map((cmd) => ({
+      name: cmd.name,
+      description: cmd.description,
+      value: cmd.name.slice(1), // remove leading "/"
+      execute: cmd.execute,
+    }));
   }
 
   async prompt(input: string) {
@@ -152,7 +189,7 @@ export class Session {
   }
 
   async handleToolUseRequest(toolName: string, input: unknown) {
-    const description = getToolDescription(toolName as ToolName, input);
+    const description = getToolDescription(toolName, input);
     const canUse = await this.canUseToolHandler?.({
       toolName,
       description,
