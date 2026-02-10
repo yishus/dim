@@ -25,6 +25,7 @@ import { generateEditDiff, generateWriteDiff } from "./helper";
 import { isErrnoException } from "./type-helper";
 import { TokenCostHelper } from "./token-cost";
 import { ExtensionLoader, type ExtensionRegistry } from "./extensions";
+import { SessionManager } from "./session-manager";
 
 export type { ModelId };
 export { Provider };
@@ -78,6 +79,7 @@ export class Session {
   ) => Promise<QuestionAnswer[]>;
   memory: { [key: string]: any } = {};
   totalCost = 0;
+  sessionManager = new SessionManager();
   private extensionRegistry?: ExtensionRegistry;
 
   private constructor() {}
@@ -275,4 +277,17 @@ export class Session {
     const existingContent = this.memory[input.path] as string | undefined;
     return generateWriteDiff(input.path, existingContent, input.content);
   }
+}
+
+let currentSession: Session | undefined;
+
+export function setSession(session: Session): void {
+  currentSession = session;
+}
+
+export function getSession(): Session {
+  if (!currentSession) {
+    throw new Error("Session not initialized");
+  }
+  return currentSession;
 }

@@ -1,9 +1,8 @@
 import { Type, type Static } from "typebox";
 import turndown from "turndown";
 
-import { Agent } from "../agent";
-import { SMALL_MODELS } from "../providers";
 import type { Tool, ToolConfig } from "./";
+import { AI } from "../ai";
 
 const description = `
  - Fetches content from a specified URL and processes it using an AI model
@@ -42,12 +41,7 @@ const callFunction = async (args: argsType, config: ToolConfig) => {
   } else {
     const td = new turndown();
     const markdown = td.turndown(await response.text());
-    const model = SMALL_MODELS[provider];
-    const agent = new Agent(model, provider);
-    const agentMessage = await agent.prompt(`${prompt}\n\n${markdown}`, {
-      tools: [],
-    });
-    return agentMessage.text;
+    return AI.summarize(provider, `${prompt}\n\n${markdown}`);
   }
 };
 
@@ -55,4 +49,9 @@ const requiresPermission = true;
 
 const describeUse = (input: argsType): string => `URL: ${input.url}`;
 
-export default { definition, callFunction, requiresPermission, describeUse } as Tool<typeof webFetchSchema>;
+export default {
+  definition,
+  callFunction,
+  requiresPermission,
+  describeUse,
+} as Tool<typeof webFetchSchema>;

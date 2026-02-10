@@ -1,7 +1,8 @@
 import type { Static, TSchema } from "typebox";
 
 import { Provider } from "../providers";
-import type { ExtensionRegistry, ExtensionToolDefinition } from "../extensions";
+import type { ExtensionRegistry, ExtensionTool } from "../extensions";
+import { getSession } from "../session";
 import askUserQuestion from "./ask-user-question";
 import bash from "./bash";
 import edit from "./edit";
@@ -57,7 +58,7 @@ export type ToolInputMap = {
 };
 
 // Extension tools storage
-let extensionTools = new Map<string, ExtensionToolDefinition>();
+let extensionTools = new Map<string, ExtensionTool<any>>();
 
 export function registerExtensionTools(registry: ExtensionRegistry): void {
   extensionTools = registry.tools;
@@ -70,9 +71,15 @@ export async function callTool(
   config: ToolConfig,
 ): Promise<string> {
   try {
-    const tool = tools[name as ToolName] ?? extensionTools.get(name);
-    if (tool) {
-      return await tool.callFunction(input as never, config);
+    const builtinTool = tools[name as ToolName];
+    if (builtinTool) {
+      return await builtinTool.callFunction(input as never, config);
+    }
+    const extensionTool = extensionTools.get(name);
+    if (extensionTool) {
+      return await extensionTool.execute(input as never, {
+        sessionManager: getSession().sessionManager,
+      });
     }
     return `Error: Tool "${name}" not found.`;
   } catch (error) {

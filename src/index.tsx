@@ -3,11 +3,12 @@ import { useState } from "react";
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 
-import { Session } from "./session";
+import { Session, setSession } from "./session";
 import HomeScreen from "./components/HomeScreen";
 import CodingAgent from "./components/CodingAgent";
 
 const session = await Session.create();
+setSession(session);
 
 interface AppProps {
   onExit: () => void;

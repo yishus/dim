@@ -1,14 +1,19 @@
 import { readdirSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import type { TSchema } from "typebox";
-import type { ToolConfig } from "./tools";
+import type { Static, TSchema } from "typebox";
 
-export interface ExtensionToolDefinition {
+import { type SessionManager } from "./session-manager";
+
+export interface ExtensionToolCallContext {
+  sessionManager: SessionManager;
+}
+
+export interface ExtensionTool<T extends TSchema> {
   name: string;
   description: string;
-  inputSchema: TSchema;
-  callFunction: (args: any, config: ToolConfig) => Promise<string>;
+  inputSchema: T;
+  execute: (args: Static<T>, ctx: ExtensionToolCallContext) => Promise<string>;
   requiresPermission?: boolean;
   describeUse?: (input: unknown) => string;
 }
@@ -28,7 +33,7 @@ export class ExtensionAPI {
     this.registry = registry;
   }
 
-  registerTool(tool: ExtensionToolDefinition): void {
+  registerTool(tool: ExtensionTool<any>): void {
     if (this.registry.tools.has(tool.name)) {
       throw new Error(`Extension tool "${tool.name}" is already registered.`);
     }
@@ -50,7 +55,7 @@ export class ExtensionAPI {
 }
 
 export class ExtensionRegistry {
-  tools = new Map<string, ExtensionToolDefinition>();
+  tools = new Map<string, ExtensionTool<any>>();
   commands: ExtensionCommand[] = [];
   systemPromptAdditions: string[] = [];
 }
