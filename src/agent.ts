@@ -5,7 +5,7 @@ import { maybeSummarize } from "./summarizer";
 import { runToolCalls } from "./tool-runner";
 import { type AskUserQuestionInput, type ToolDefinition } from "./tools";
 
-interface StreamOptions {
+interface PromptOptions {
   tools: ToolDefinition[];
   canUseTool?: (name: string, input: unknown) => Promise<boolean>;
   askUserQuestion?: (input: AskUserQuestionInput) => Promise<QuestionAnswer[]>;
@@ -25,7 +25,7 @@ export class Agent {
     public systemReminderStart?: string,
   ) {}
 
-  async *stream(input: string | undefined, options: StreamOptions) {
+  async *stream(input: string | undefined, options: PromptOptions) {
     const {
       tools,
       canUseTool,
@@ -97,7 +97,7 @@ export class Agent {
     }
   }
 
-  async prompt(input: string, options: StreamOptions) {
+  async prompt(input: string, options: PromptOptions) {
     const {
       tools,
       canUseTool,
@@ -106,10 +106,7 @@ export class Agent {
       saveToSessionMemory,
       updateTokenUsage,
     } = options;
-    const messages: MessageParam[] = [
-      ...this.context,
-      this.nextMessage(input),
-    ];
+    const messages: MessageParam[] = [...this.context, this.nextMessage(input)];
 
     while (true) {
       const { message, usage } = await AI.prompt(
