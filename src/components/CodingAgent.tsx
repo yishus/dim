@@ -94,14 +94,14 @@ const CodingAgent = (props: Props) => {
   }, []);
 
   useEffect(() => {
-    session.eventEmitter.on("message_start", (event) => {
+    const onStart = (event: { role: "user" | "assistant" }) => {
       setMessages((prevMessages) => [
         ...prevMessages,
         { role: event.role, text: "" },
       ]);
-    });
+    };
 
-    session.eventEmitter.on("message_update", (event) => {
+    const onUpdate = (event: { text: string }) => {
       setMessages((prevMessages) => {
         const messages = [...prevMessages];
         const lastMessage = messages.pop();
@@ -109,22 +109,37 @@ const CodingAgent = (props: Props) => {
           lastMessage.text += event.text;
           return [...messages, lastMessage];
         }
-
         return prevMessages;
       });
-    });
+    };
 
-    session.eventEmitter.on("token_usage_update", (event) => {
+    const onTokenUsage = (event: {
+      cost: number;
+      input_tokens?: number;
+      output_tokens?: number;
+    }) => {
       setTokenCost(event.cost);
       setInputTokens(event.input_tokens ?? 0);
       setOutputTokens(event.output_tokens ?? 0);
-    });
+    };
 
-    session.eventEmitter.on("message_end", () => {
+    const onEnd = () => {
       setIsLoading(false);
-    });
+    };
+
+    session.eventEmitter.on("message_start", onStart);
+    session.eventEmitter.on("message_update", onUpdate);
+    session.eventEmitter.on("token_usage_update", onTokenUsage);
+    session.eventEmitter.on("message_end", onEnd);
 
     handleSubmit(userPrompt);
+
+    return () => {
+      session.eventEmitter.off("message_start", onStart);
+      session.eventEmitter.off("message_update", onUpdate);
+      session.eventEmitter.off("token_usage_update", onTokenUsage);
+      session.eventEmitter.off("message_end", onEnd);
+    };
   }, []);
 
   const handleToolUseSelect = (approved: boolean) => {

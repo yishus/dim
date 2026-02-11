@@ -10,3 +10,6 @@ export const DEFAULT_BASH_TIMEOUT_MS = 30_000;
 
 // Diff settings
 export const DIFF_CONTEXT_LINES = 3;
+
+// Web fetch
+export const FETCH_TIMEOUT_MS = 30_000;

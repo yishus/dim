@@ -1,4 +1,4 @@
-import { AuthStorage } from "./auth-storage";
+import { authStorage } from "./auth-storage";
 import { Provider, providers, SMALL_MODELS } from "./providers";
 import { type ToolDefinition } from "./tools";
 
@@ -89,6 +89,35 @@ export interface MessageResponse {
   usage: Usage;
 }
 
+function isRetryable(err: unknown): boolean {
+  if (err instanceof Error) {
+    const msg = err.message;
+    return (
+      msg.includes("429") ||
+      msg.includes("500") ||
+      msg.includes("503") ||
+      msg.includes("ECONNRESET") ||
+      msg.includes("ETIMEDOUT")
+    );
+  }
+  return false;
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === maxRetries || !isRetryable(err)) throw err;
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+    }
+  }
+  throw new Error("unreachable");
+}
+
 export namespace AI {
   export const prompt = async (
     provider: Provider,
@@ -96,13 +125,14 @@ export namespace AI {
     model?: ModelId,
     tools?: ToolDefinition[],
   ) => {
-    const authStorage = new AuthStorage();
     const apiKey = authStorage.get(provider);
-    return providers[provider].prompt(input, {
-      apiKey,
-      tools,
-      model,
-    });
+    return withRetry(() =>
+      providers[provider].prompt(input, {
+        apiKey,
+        tools,
+        model,
+      }),
+    );
   };
 
   /**
@@ -140,7 +170,6 @@ export namespace AI {
     tools?: ToolDefinition[],
     signal?: AbortSignal,
   ) => {
-    const authStorage = new AuthStorage();
     const apiKey = authStorage.get(provider);
     return providers[provider].stream(input, {
       apiKey,

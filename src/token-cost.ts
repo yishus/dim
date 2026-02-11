@@ -63,7 +63,7 @@ export namespace TokenCostHelper {
     const pricing = MODEL_PRICING[model];
 
     if (!pricing) {
-      throw new Error(`Unknown model: ${model}`);
+      return { inputCost: 0, outputCost: 0, totalCost: 0 };
     }
 
     const inputCost = (inputTokens / 1_000_000) * pricing.inputPerMillion;

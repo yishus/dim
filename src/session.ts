@@ -1,4 +1,5 @@
-import { mkdir, readFileSync } from "fs";
+import { mkdir } from "fs/promises";
+import { readFileSync } from "fs";
 import { join } from "path";
 import EventEmitter from "events";
 import { execSync } from "child_process";
@@ -22,10 +23,10 @@ import {
   type AskUserQuestionInput,
 } from "./tools";
 import { generateEditDiff, generateWriteDiff } from "./helper";
-import { isErrnoException } from "./type-helper";
 import { TokenCostHelper } from "./token-cost";
 import { ExtensionLoader, type ExtensionRegistry } from "./extensions";
 import { SessionManager } from "./session-manager";
+import { authStorage } from "./auth-storage";
 
 export type { ModelId };
 export { Provider };
@@ -68,6 +69,14 @@ export interface QuestionAnswer {
 
 const SYSTEM_PROMPT_PATH = join(__dirname, "prompts/system_workflow.md");
 
+function tryExecSync(cmd: string, fallback: string = ""): string {
+  try {
+    return execSync(cmd).toString().trim();
+  } catch {
+    return fallback;
+  }
+}
+
 export class Session {
   agent!: Agent;
   model: ModelId = DEFAULT_ANTHROPIC_MODEL;
@@ -100,11 +109,10 @@ export class Session {
       cwd.replace(/[:/\\]/g, "-"),
       "scratchpad",
     );
-    mkdir(scratchpadPath, { recursive: true }, (err) => {
-      if (err) throw err;
-    });
-    let systemPrompt: string | undefined;
-    let systemReminderStart;
+    await mkdir(scratchpadPath, { recursive: true });
+
+    // Read CLAUDE.md (optional)
+    let systemReminderStart: string | undefined;
     try {
       const claudeMd = readFileSync(process.cwd() + "/CLAUDE.md", "utf8");
       if (claudeMd) {
@@ -117,50 +125,60 @@ export class Session {
           claudeMd,
         );
       }
-      const readSystemPrompt = readFileSync(SYSTEM_PROMPT_PATH, "utf8");
-      const isGitRepo = execSync("git rev-parse --is-inside-work-tree");
-      const modelName =
-        ALL_MODELS.find((m) => m.id === session.model)?.name || "";
-      systemPrompt = readSystemPrompt
-        .replace("$cwd", cwd)
-        .replace("$isGitRepo", isGitRepo ? "true" : "false")
-        .replace("$OS", platform())
-        .replace("$OSVersion", release())
-        .replace("$date", new Date().toISOString().split("T")[0] || "")
-        .replace("$model", modelName)
-        .replace("$modelId", session.model)
-        .replace("$scratchpadPath", scratchpadPath)
-        .replace(
-          "$branch",
-          execSync("git rev-parse --abbrev-ref HEAD").toString().trim(),
-        )
-        .replace(
-          "$gitStatus",
-          execSync('git log -n 5 --pretty=format:"%h %s"').toString().trim(),
-        )
-        .replace("$recentCommits", execSync("git status -s").toString().trim());
-    } catch (err: unknown) {
-      if (!isErrnoException(err) || err.code !== "ENOENT") {
-        throw err;
-      }
+    } catch {
+      // No CLAUDE.md — that's fine
     }
 
+    // Read system prompt (required)
+    const readSystemPrompt = readFileSync(SYSTEM_PROMPT_PATH, "utf8");
+
+    // Git info (optional — each call independent)
+    const isGitRepo =
+      tryExecSync("git rev-parse --is-inside-work-tree") === "true";
+    const branch = isGitRepo
+      ? tryExecSync("git rev-parse --abbrev-ref HEAD", "unknown")
+      : "unknown";
+    const gitStatus = isGitRepo
+      ? tryExecSync("git status -s")
+      : "";
+    const recentCommits = isGitRepo
+      ? tryExecSync('git log -n 5 --pretty=format:"%h %s"')
+      : "";
+
+    const modelName =
+      ALL_MODELS.find((m) => m.id === session.model)?.name || "";
+    const systemPrompt = readSystemPrompt
+      .replace("$cwd", cwd)
+      .replace("$isGitRepo", isGitRepo ? "true" : "false")
+      .replace("$OS", platform())
+      .replace("$OSVersion", release())
+      .replace("$date", new Date().toISOString().split("T")[0] || "")
+      .replace("$model", modelName)
+      .replace("$modelId", session.model)
+      .replace("$scratchpadPath", scratchpadPath)
+      .replace("$branch", branch)
+      .replace("$gitStatus", recentCommits)
+      .replace("$recentCommits", gitStatus);
+
     // Append extension system prompt additions
+    let finalSystemPrompt = systemPrompt;
     if (registry.systemPromptAdditions.length > 0) {
       const extensionPrompts = registry.systemPromptAdditions.join("\n\n");
-      systemPrompt = systemPrompt
-        ? `${systemPrompt}\n\n${extensionPrompts}`
-        : extensionPrompts;
+      finalSystemPrompt = `${systemPrompt}\n\n${extensionPrompts}`;
     }
 
     session.agent = new Agent(
       session.model,
       session.provider,
-      systemPrompt,
+      finalSystemPrompt,
       systemReminderStart,
     );
 
     return session;
+  }
+
+  hasApiKeys(): boolean {
+    return authStorage.hasAnyKey();
   }
 
   getExtensionCommands(): Array<{

@@ -96,12 +96,12 @@ export async function callTool(
 
 export function getToolPermission(name: string): boolean {
   const tool = tools[name as ToolName] ?? extensionTools.get(name);
-  return tool.requiresPermission;
+  return tool?.requiresPermission ?? false;
 }
 
 export function getToolDescription(name: string, input: unknown): string {
   const tool = tools[name as ToolName] ?? extensionTools.get(name);
-  return tool.describeUse(input as never);
+  return tool?.describeUse(input as never) ?? name;
 }
 
 export function isKnownTool(name: string): boolean {

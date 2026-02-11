@@ -6,21 +6,11 @@ import {
 } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import { ALL_MODELS, Provider, type ModelId } from "../session";
+import { PROVIDER_DISPLAY_NAMES } from "../providers";
 import { THEME } from "../theme";
 
-const providerDisplayName = (provider: Provider): string => {
-  switch (provider) {
-    case Provider.Anthropic:
-      return "Anthropic";
-    case Provider.Google:
-      return "Google";
-    case Provider.OpenAI:
-      return "OpenAI";
-  }
-};
-
 const modelOptions: SelectOption[] = ALL_MODELS.map((m) => ({
-  name: `${m.name} (${providerDisplayName(m.provider)})`,
+  name: `${m.name} (${PROVIDER_DISPLAY_NAMES[m.provider]})`,
   description: m.id,
   value: `${m.provider}:${m.id}`,
 }));

@@ -3,6 +3,7 @@ import turndown from "turndown";
 
 import type { Tool, ToolConfig } from "./";
 import { AI } from "../ai";
+import { FETCH_TIMEOUT_MS } from "../constants";
 
 const description = `
  - Fetches content from a specified URL and processes it using an AI model
@@ -33,7 +34,9 @@ const definition = {
 const callFunction = async (args: argsType, config: ToolConfig) => {
   const { url, prompt } = args;
   const { provider } = config;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
   if (response.redirected) {
     return `The URL was redirected to ${response.url}`;
   } else if (!response.ok) {
