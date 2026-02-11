@@ -1,40 +1,12 @@
-import type {
-  MessageParam,
-  MessageResponse,
-  MessageDelta,
-  ModelId,
-} from "../ai";
-import type { ToolDefinition } from "../tools";
+import type { ModelId } from "../types";
+import { Provider } from "../types";
+import type { ProviderInterface } from "../types";
 import { SMALL_ANTHROPIC_MODEL, AnthropicProvider } from "./anthropic";
 import { SMALL_GOOGLE_MODEL, GoogleProvider } from "./google";
 import { SMALL_OPENAI_MODEL, OpenAIProvider } from "./openai";
 
-export enum Provider {
-  Anthropic = "anthropic",
-  Google = "google",
-  OpenAI = "openai",
-}
-
-export interface StreamOptions {
-  apiKey?: string;
-  tools?: ToolDefinition[];
-  systemPrompt?: string;
-  model?: ModelId;
-  signal?: AbortSignal;
-}
-
-export interface StreamResult {
-  fullMessage: () => Promise<MessageResponse>;
-  streamText: () => AsyncGenerator<MessageDelta>;
-}
-
-export interface ProviderInterface {
-  prompt(
-    input: MessageParam[],
-    options?: StreamOptions,
-  ): Promise<MessageResponse>;
-  stream(input: MessageParam[], options?: StreamOptions): StreamResult;
-}
+export { Provider };
+export type { StreamOptions, StreamResult, ProviderInterface } from "../types";
 
 export const providers: Record<Provider, ProviderInterface> = {
   [Provider.Anthropic]: AnthropicProvider,

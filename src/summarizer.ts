@@ -1,11 +1,12 @@
 import { readFile } from "fs/promises";
 
-import { AI, type MessageParam } from "./ai";
+import { AI } from "./ai";
+import type { MessageParam, SummarizeResult } from "./types";
+import { Provider } from "./types";
 import {
   SUMMARIZATION_TOKEN_THRESHOLD,
   RECENT_TURNS_TO_KEEP,
 } from "./constants";
-import type { Provider } from "./providers";
 
 /**
  * Format messages as readable text for summarization.
@@ -60,10 +61,7 @@ export async function generateSummary(
   return AI.summarize(provider, prompt);
 }
 
-export interface SummarizeResult {
-  context: MessageParam[];
-  contextTokens: number;
-}
+export type { SummarizeResult };
 
 /**
  * Check if context needs summarization and perform it if necessary.

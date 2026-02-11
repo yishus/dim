@@ -11,14 +11,13 @@ import type {
   MessageResponse,
   MessageParam,
   MessageDelta,
-} from "../ai";
-import type { ToolDefinition } from "../tools";
-import type { ProviderInterface, StreamOptions } from "./";
+  OpenAIModelId,
+  ProviderInterface,
+  StreamOptions,
+  ToolDefinition,
+} from "../types";
 
-export type OpenAIModelId =
-  | "gpt-5.2-codex"
-  | "gpt-5.1-codex-mini"
-  | "gpt-4o-mini";
+export type { OpenAIModelId } from "../types";
 
 export const DEFAULT_OPENAI_MODEL: OpenAIModelId = "gpt-5.1-codex-mini";
 

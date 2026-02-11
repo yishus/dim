@@ -1,34 +1,15 @@
 import { readdirSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import type { Static, TSchema } from "typebox";
 
-import { type SessionManager } from "./session-manager";
-import type { Provider } from "./providers";
-import type { ModelId } from "./ai";
+import type {
+  ExtensionToolCallContext,
+  ExtensionTool,
+  ExtensionCommand,
+  ActivateFunction,
+} from "./types";
 
-export interface ExtensionToolCallContext {
-  sessionManager: SessionManager;
-  provider: Provider;
-  model: ModelId;
-}
-
-export interface ExtensionTool<T extends TSchema> {
-  name: string;
-  description: string;
-  inputSchema: T;
-  execute: (args: Static<T>, ctx: ExtensionToolCallContext) => Promise<string>;
-  requiresPermission?: boolean;
-  describeUse?: (input: Static<T>) => string;
-}
-
-export interface ExtensionCommand {
-  name: string;
-  description: string;
-  execute: () => void | Promise<void>;
-}
-
-export type ActivateFunction = (api: ExtensionAPI) => void | Promise<void>;
+export type { ExtensionToolCallContext, ExtensionTool, ExtensionCommand, ActivateFunction };
 
 export class ExtensionAPI {
   private registry: ExtensionRegistry;

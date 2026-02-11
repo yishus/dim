@@ -1,8 +1,7 @@
-import type { Static, TSchema } from "typebox";
-
-import { Provider } from "../providers";
-import type { ModelId } from "../ai";
-import type { ExtensionRegistry, ExtensionTool } from "../extensions";
+import type { Static } from "typebox";
+import type { ToolConfig, ToolDefinition, Tool } from "../types";
+import type { ExtensionTool } from "../types";
+import type { ExtensionRegistry } from "../extensions";
 import { getSession } from "../session";
 import askUserQuestion from "./ask-user-question";
 import bash from "./bash";
@@ -19,27 +18,7 @@ export type {
   OptionInput,
 } from "./ask-user-question";
 
-export interface ToolConfig {
-  provider: Provider;
-  model: ModelId;
-}
-
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: TSchema;
-}
-
-export interface Tool<T extends TSchema> {
-  definition: {
-    name: string;
-    description: string;
-    inputSchema: T;
-  };
-  callFunction: (args: Static<T>, config: ToolConfig) => Promise<string>;
-  requiresPermission: boolean;
-  describeUse: (input: Static<T>) => string;
-}
+export type { ToolConfig, ToolDefinition, Tool };
 
 const tools = {
   askUserQuestion,

@@ -8,13 +8,20 @@ import { platform, release, tmpdir } from "os";
 import {
   type MessageDelta,
   type ModelId,
+  type ProviderModel,
+  type UIMessage,
+  type ToolUseRequest,
+  type AskUserQuestionRequest,
+  type QuestionAnswer,
+  Provider,
+} from "./types";
+import {
   AVAILABLE_ANTHROPIC_MODELS,
   AVAILABLE_GOOGLE_MODELS,
   AVAILABLE_OPENAI_MODELS,
   DEFAULT_ANTHROPIC_MODEL,
 } from "./ai";
 import { Agent } from "./agent";
-import { Provider } from "./providers";
 import {
   getAllToolDefinitions,
   getToolDescription,
@@ -28,14 +35,8 @@ import { ExtensionLoader, type ExtensionRegistry } from "./extensions";
 import { SessionManager } from "./session-manager";
 import { authStorage } from "./auth-storage";
 
-export type { ModelId };
+export type { ModelId, ProviderModel, UIMessage, ToolUseRequest, AskUserQuestionRequest, QuestionAnswer };
 export { Provider };
-
-export interface ProviderModel {
-  id: ModelId;
-  name: string;
-  provider: Provider;
-}
 
 export const ALL_MODELS: ProviderModel[] = [
   ...AVAILABLE_ANTHROPIC_MODELS.map((m) => ({
@@ -45,27 +46,6 @@ export const ALL_MODELS: ProviderModel[] = [
   ...AVAILABLE_GOOGLE_MODELS.map((m) => ({ ...m, provider: Provider.Google })),
   ...AVAILABLE_OPENAI_MODELS.map((m) => ({ ...m, provider: Provider.OpenAI })),
 ];
-
-export interface UIMessage {
-  role: "user" | "assistant";
-  text: string;
-}
-
-export interface ToolUseRequest {
-  toolName: string;
-  description: string;
-  input: unknown;
-}
-
-export interface AskUserQuestionRequest {
-  input: AskUserQuestionInput;
-}
-
-export interface QuestionAnswer {
-  question: string;
-  selectedLabels: string[];
-  customText?: string;
-}
 
 const SYSTEM_PROMPT_PATH = join(__dirname, "prompts/system_workflow.md");
 

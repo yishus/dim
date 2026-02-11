@@ -11,15 +11,13 @@ import type {
   MessageResponse,
   MessageParam,
   MessageDelta,
-} from "../ai";
-import type { ToolDefinition } from "../tools";
-import type { ProviderInterface, StreamOptions } from "./";
+  GoogleModelId,
+  ProviderInterface,
+  StreamOptions,
+  ToolDefinition,
+} from "../types";
 
-export type GoogleModelId =
-  | "gemini-3-flash-preview"
-  | "gemini-3-pro-preview"
-  | "gemini-2.5-pro"
-  | "gemini-2.0-flash";
+export type { GoogleModelId } from "../types";
 
 export const DEFAULT_GOOGLE_MODEL: GoogleModelId = "gemini-3-flash-preview";
 

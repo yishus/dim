@@ -1,5 +1,5 @@
-import type { Message, MessageParam } from "./ai";
-import type { QuestionAnswer } from "./session";
+import type { Message, MessageParam } from "./types";
+import type { ToolRunnerCallbacks, QuestionAnswer } from "./types";
 import {
   callTool,
   getToolPermission,
@@ -10,12 +10,7 @@ import {
   type AskUserQuestionInput,
 } from "./tools";
 
-export interface ToolRunnerCallbacks {
-  canUseTool?: (name: string, input: unknown) => Promise<boolean>;
-  askUserQuestion?: (input: AskUserQuestionInput) => Promise<QuestionAnswer[]>;
-  emitMessage?: (message: string) => void;
-  saveToSessionMemory?: (key: string, value: unknown) => void;
-}
+export type { ToolRunnerCallbacks };
 
 export function formatQuestionAnswers(answers: QuestionAnswer[]): string {
   if (answers.length === 0) {

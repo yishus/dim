@@ -11,14 +11,13 @@ import type {
   MessageParam,
   MessageDelta,
   ContentBlock,
-} from "../ai";
-import type { ProviderInterface, StreamOptions } from "./";
-import type { ToolDefinition } from "../tools";
+  AnthropicModelId,
+  ProviderInterface,
+  StreamOptions,
+  ToolDefinition,
+} from "../types";
 
-export type AnthropicModelId =
-  | "claude-sonnet-4-5-20250929"
-  | "claude-opus-4-20250514"
-  | "claude-haiku-4-5-20251001";
+export type { AnthropicModelId } from "../types";
 
 export const DEFAULT_ANTHROPIC_MODEL: AnthropicModelId =
   "claude-sonnet-4-5-20250929";

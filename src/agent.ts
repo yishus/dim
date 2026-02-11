@@ -1,9 +1,9 @@
-import { AI, type Message, type MessageParam, type ModelId } from "./ai";
-import { Provider } from "./providers";
-import type { QuestionAnswer } from "./session";
+import { AI } from "./ai";
+import type { Message, MessageParam, ModelId } from "./types";
+import type { PromptOptions } from "./types";
+import { Provider } from "./types";
 import { maybeSummarize } from "./summarizer";
 import { runToolCalls } from "./tool-runner";
-import { type AskUserQuestionInput, type ToolDefinition } from "./tools";
 
 function isAbortError(err: unknown): boolean {
   return (
@@ -13,20 +13,6 @@ function isAbortError(err: unknown): boolean {
       (err as Error).message.includes("AbortError") ||
       (err as Error).name === "APIUserAbortError")
   );
-}
-
-interface PromptOptions {
-  tools: ToolDefinition[];
-  canUseTool?: (name: string, input: unknown) => Promise<boolean>;
-  askUserQuestion?: (input: AskUserQuestionInput) => Promise<QuestionAnswer[]>;
-  emitMessage?: (message: string) => void;
-  saveToSessionMemory?: (key: string, value: unknown) => void;
-  updateTokenUsage?: (
-    input_tokens: number,
-    output_tokens: number,
-    cache_creation_input_tokens?: number,
-    cache_read_input_tokens?: number,
-  ) => void;
 }
 
 export class Agent {
