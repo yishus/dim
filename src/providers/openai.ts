@@ -107,14 +107,6 @@ export const OpenAIProvider: ProviderInterface = {
         const stream = await streamResponse;
 
         for await (const event of stream) {
-          if (isFirst) {
-            yield {
-              type: "message_start",
-              role: "assistant",
-            } as MessageDelta;
-            isFirst = false;
-          }
-
           const delta = process_stream_event(
             event,
             accumulatedFunctionCalls,
@@ -127,6 +119,13 @@ export const OpenAIProvider: ProviderInterface = {
           );
 
           if (delta) {
+            if (isFirst) {
+              yield {
+                type: "message_start",
+                role: "assistant",
+              } as MessageDelta;
+              isFirst = false;
+            }
             yield delta;
           }
         }
@@ -221,7 +220,7 @@ const message_param_to_input_item = (
     }
 
     // Add user message using EasyInputMessage format
-    if (textContent.length > 0) {
+    if (textContent) {
       items.push({
         role: "user",
         content: textContent

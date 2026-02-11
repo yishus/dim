@@ -105,17 +105,21 @@ export const GoogleProvider: ProviderInterface = {
 
         const response = await streamResponse;
         for await (const chunk of response) {
-          if (isFirst) {
-            yield { type: "message_start", role: "assistant" } as MessageDelta;
-            isFirst = false;
-          }
-
           accumulatedParts.push(
             ...(chunk.candidates?.[0]?.content?.parts || []),
           );
           usageMetadata = chunk.usageMetadata || {};
 
-          yield { type: "text_update", text: chunk.text || "" } as MessageDelta;
+          if (chunk.text) {
+            if (isFirst) {
+              yield { type: "message_start", role: "assistant" } as MessageDelta;
+              isFirst = false;
+            }
+            yield {
+              type: "text_update",
+              text: chunk.text,
+            } as MessageDelta;
+          }
         }
 
         // Signal that streaming is complete
