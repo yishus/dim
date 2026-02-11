@@ -3,6 +3,7 @@ import { Provider, type ModelId } from "./types";
 import { providers, SMALL_MODELS } from "./providers";
 import type { ToolDefinition } from "./types";
 import type { MessageParam } from "./types";
+import { withRetry } from "./errors";
 
 export type {
   MessageStartDelta,
@@ -27,35 +28,6 @@ export {
 } from "./providers/anthropic";
 export { AVAILABLE_GOOGLE_MODELS } from "./providers/google";
 export { AVAILABLE_OPENAI_MODELS } from "./providers/openai";
-
-function isRetryable(err: unknown): boolean {
-  if (err instanceof Error) {
-    const msg = err.message;
-    return (
-      msg.includes("429") ||
-      msg.includes("500") ||
-      msg.includes("503") ||
-      msg.includes("ECONNRESET") ||
-      msg.includes("ETIMEDOUT")
-    );
-  }
-  return false;
-}
-
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-): Promise<T> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (attempt === maxRetries || !isRetryable(err)) throw err;
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
-    }
-  }
-  throw new Error("unreachable");
-}
 
 export namespace AI {
   export const prompt = async (

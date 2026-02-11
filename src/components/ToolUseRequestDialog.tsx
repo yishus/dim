@@ -46,9 +46,9 @@ const ToolUseRequestDialog = ({ request, session, onSelect }: Props) => {
   const { toolName, description, input } = request;
   let diffContent;
   if (toolName === "edit") {
-    diffContent = session.computeEditDiff(input as ToolInputMap["edit"]);
+    diffContent = session.fileMemory.computeEditDiff(input as ToolInputMap["edit"]);
   } else if (toolName === "write") {
-    diffContent = session.computeWriteDiff(input as ToolInputMap["write"]);
+    diffContent = session.fileMemory.computeWriteDiff(input as ToolInputMap["write"]);
   }
 
   return (

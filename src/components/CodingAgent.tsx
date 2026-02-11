@@ -4,7 +4,6 @@ import {
   Session,
   type ToolUseRequest,
   type AskUserQuestionRequest,
-  type UIMessage,
   type ModelId,
   type QuestionAnswer,
   ALL_MODELS,
@@ -13,13 +12,14 @@ import {
 import { PROVIDER_DISPLAY_NAMES } from "../providers";
 import { useKeyboard } from "@opentui/react";
 import ChatTextbox from "./ChatTextbox";
-import Message from "./Message";
+import MessageList from "./MessageList";
 import ToolUseRequestDialog from "./ToolUseRequestDialog";
 import AskUserQuestionDialog from "./AskUserQuestionDialog";
 import ModelSelectorDialog from "./ModelSelectorDialog";
-import { THEME } from "../theme";
 import type { AskUserQuestionInput } from "../tools";
 import LoadingIndicator from "./LoadingIndicator";
+import StatusBar from "./StatusBar";
+import { useSessionEvents } from "../hooks/useSessionEvents";
 
 interface Props {
   session: Session;
@@ -30,7 +30,7 @@ interface Props {
 const CodingAgent = (props: Props) => {
   const { session, userPrompt, onExit } = props;
 
-  const extensionCommands = session.getExtensionCommands();
+  const extensionCommands = session.extensions.getCommands();
   const allCommands = [
     { name: "/model", description: "Select AI model", value: "model" },
     { name: "/exit", description: "Exit the application", value: "exit" },
@@ -40,14 +40,13 @@ const CodingAgent = (props: Props) => {
       value: cmd.value,
     })),
   ];
-  const [messages, setMessages] = useState<UIMessage[]>([]);
-  const [tokenCost, setTokenCost] = useState(0);
-  const [inputTokens, setInputTokens] = useState(0);
-  const [outputTokens, setOutputTokens] = useState(0);
+
+  const { messages, setMessages, tokenUsage, isLoading, setIsLoading } =
+    useSessionEvents(session);
+
   const [showToolUseRequest, setShowToolUseRequest] = useState(false);
   const [showAskUserQuestion, setShowAskUserQuestion] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState<ModelId>(session.getModel());
   const [currentProvider, setCurrentProvider] = useState<Provider>(
     session.getProvider(),
@@ -72,7 +71,7 @@ const CodingAgent = (props: Props) => {
   );
 
   useEffect(() => {
-    session.canUseToolHandler = async (request: ToolUseRequest) => {
+    session.toolService.canUseToolHandler = async (request: ToolUseRequest) => {
       toolUseRequestRef.current = request;
       setShowToolUseRequest(true);
 
@@ -81,7 +80,7 @@ const CodingAgent = (props: Props) => {
       });
     };
 
-    session.askUserQuestionHandler = async (
+    session.toolService.askUserQuestionHandler = async (
       request: AskUserQuestionRequest,
     ) => {
       askUserQuestionRef.current = request.input;
@@ -94,52 +93,7 @@ const CodingAgent = (props: Props) => {
   }, []);
 
   useEffect(() => {
-    const onStart = (event: { role: "user" | "assistant" }) => {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { role: event.role, text: "" },
-      ]);
-    };
-
-    const onUpdate = (event: { text: string }) => {
-      setMessages((prevMessages) => {
-        const messages = [...prevMessages];
-        const lastMessage = messages.pop();
-        if (lastMessage) {
-          lastMessage.text += event.text;
-          return [...messages, lastMessage];
-        }
-        return prevMessages;
-      });
-    };
-
-    const onTokenUsage = (event: {
-      cost: number;
-      input_tokens?: number;
-      output_tokens?: number;
-    }) => {
-      setTokenCost(event.cost);
-      setInputTokens(event.input_tokens ?? 0);
-      setOutputTokens(event.output_tokens ?? 0);
-    };
-
-    const onEnd = () => {
-      setIsLoading(false);
-    };
-
-    session.eventEmitter.on("message_start", onStart);
-    session.eventEmitter.on("message_update", onUpdate);
-    session.eventEmitter.on("token_usage_update", onTokenUsage);
-    session.eventEmitter.on("message_end", onEnd);
-
     handleSubmit(userPrompt);
-
-    return () => {
-      session.eventEmitter.off("message_start", onStart);
-      session.eventEmitter.off("message_update", onUpdate);
-      session.eventEmitter.off("token_usage_update", onTokenUsage);
-      session.eventEmitter.off("message_end", onEnd);
-    };
   }, []);
 
   const handleToolUseSelect = (approved: boolean) => {
@@ -215,9 +169,7 @@ const CodingAgent = (props: Props) => {
         stickyScroll={true}
         stickyStart="bottom"
       >
-        {messages.map((message, index) => (
-          <Message key={index} message={message} index={index} />
-        ))}
+        <MessageList messages={messages} />
         {showToolUseRequest && toolUseRequestRef.current && (
           <ToolUseRequestDialog
             request={toolUseRequestRef.current}
@@ -246,44 +198,13 @@ const CodingAgent = (props: Props) => {
         commands={allCommands}
         minHeight={6}
       />
-      <box
-        style={{
-          flexDirection: "row",
-        }}
-      >
-        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
-          Provider
-        </text>
-        <text fg={THEME.colors.text.primary} style={{ marginRight: 1 }}>
-          {currentProviderName}
-        </text>
-
-        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
-          Model
-        </text>
-        <text fg={THEME.colors.text.primary} style={{ marginRight: 1 }}>
-          {currentModelName}
-        </text>
-
-        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
-          Input Tokens
-        </text>
-        <text fg={THEME.colors.text.primary} style={{ marginRight: 1 }}>
-          {inputTokens}
-        </text>
-
-        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
-          Output Tokens
-        </text>
-        <text fg={THEME.colors.text.primary} style={{ marginRight: 1 }}>
-          {outputTokens}
-        </text>
-
-        <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
-          Total Cost
-        </text>
-        <text fg={THEME.colors.text.primary}>${tokenCost.toFixed(6)}</text>
-      </box>
+      <StatusBar
+        providerName={currentProviderName}
+        modelName={currentModelName}
+        inputTokens={tokenUsage.inputTokens}
+        outputTokens={tokenUsage.outputTokens}
+        cost={tokenUsage.cost}
+      />
     </box>
   );
 };

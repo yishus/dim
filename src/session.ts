@@ -1,7 +1,6 @@
 import { mkdir } from "fs/promises";
 import { readFileSync } from "fs";
 import { join } from "path";
-import EventEmitter from "events";
 import { execSync } from "child_process";
 import { platform, release, tmpdir } from "os";
 
@@ -22,18 +21,15 @@ import {
   DEFAULT_ANTHROPIC_MODEL,
 } from "./ai";
 import { Agent } from "./agent";
-import {
-  getAllToolDefinitions,
-  getToolDescription,
-  registerExtensionTools,
-  type ToolInputMap,
-  type AskUserQuestionInput,
-} from "./tools";
-import { generateEditDiff, generateWriteDiff } from "./helper";
-import { TokenCostHelper } from "./token-cost";
-import { ExtensionLoader, type ExtensionRegistry } from "./extensions";
+import { getAllToolDefinitions } from "./tools";
+import { isAbortError } from "./errors";
 import { SessionManager } from "./session-manager";
 import { authStorage } from "./auth-storage";
+import { EventBus } from "./services/event-bus";
+import { CostTracker } from "./services/cost-tracker";
+import { FileMemoryService } from "./services/file-memory";
+import { ExtensionService } from "./services/extension-service";
+import { ToolService } from "./services/tool-service";
 
 export type { ModelId, ProviderModel, UIMessage, ToolUseRequest, AskUserQuestionRequest, QuestionAnswer };
 export { Provider };
@@ -61,15 +57,12 @@ export class Session {
   agent!: Agent;
   model: ModelId = DEFAULT_ANTHROPIC_MODEL;
   provider: Provider = Provider.Anthropic;
-  eventEmitter = new EventEmitter();
-  canUseToolHandler?: (request: ToolUseRequest) => Promise<boolean>;
-  askUserQuestionHandler?: (
-    request: AskUserQuestionRequest,
-  ) => Promise<QuestionAnswer[]>;
-  memory: { [key: string]: any } = {};
-  totalCost = 0;
+  eventBus = new EventBus();
+  costTracker = new CostTracker(this.eventBus);
+  fileMemory = new FileMemoryService();
+  extensions = new ExtensionService();
+  toolService = new ToolService();
   sessionManager = new SessionManager();
-  private extensionRegistry?: ExtensionRegistry;
 
   private constructor() {}
 
@@ -77,9 +70,7 @@ export class Session {
     const session = new Session();
 
     // Load extensions
-    const registry = await ExtensionLoader.loadAll();
-    session.extensionRegistry = registry;
-    registerExtensionTools(registry);
+    await session.extensions.load();
 
     // Create scratchpad directory if it doesn't exist
     const cwd = process.cwd();
@@ -141,10 +132,10 @@ export class Session {
       .replace("$recentCommits", gitStatus);
 
     // Append extension system prompt additions
+    const extensionPrompts = session.extensions.getSystemPromptAdditions();
     let finalSystemPrompt = systemPrompt;
-    if (registry.systemPromptAdditions.length > 0) {
-      const extensionPrompts = registry.systemPromptAdditions.join("\n\n");
-      finalSystemPrompt = `${systemPrompt}\n\n${extensionPrompts}`;
+    if (extensionPrompts.length > 0) {
+      finalSystemPrompt = `${systemPrompt}\n\n${extensionPrompts.join("\n\n")}`;
     }
 
     session.agent = new Agent(
@@ -161,28 +152,13 @@ export class Session {
     return authStorage.hasAnyKey();
   }
 
-  getExtensionCommands(): Array<{
-    name: string;
-    description: string;
-    value: string;
-    execute: () => void | Promise<void>;
-  }> {
-    if (!this.extensionRegistry) return [];
-    return this.extensionRegistry.commands.map((cmd) => ({
-      name: cmd.name,
-      description: cmd.description,
-      value: cmd.name.slice(1), // remove leading "/"
-      execute: cmd.execute,
-    }));
-  }
-
   async prompt(input: string) {
     const stream = this.agent.stream(input, {
       tools: getAllToolDefinitions(),
-      canUseTool: this.handleToolUseRequest.bind(this),
-      askUserQuestion: this.handleAskUserQuestion.bind(this),
+      canUseTool: this.toolService.requestToolApproval.bind(this.toolService),
+      askUserQuestion: this.toolService.askUserQuestion.bind(this.toolService),
       emitMessage: this.handleEmitMessage.bind(this),
-      saveToSessionMemory: this.handleSaveToSessionMemory.bind(this),
+      saveToSessionMemory: this.fileMemory.save.bind(this.fileMemory),
       updateTokenUsage: this.handleTokenUsage.bind(this),
     });
     try {
@@ -190,71 +166,33 @@ export class Session {
         this.processDelta(event);
       }
     } catch (err) {
-      // Abort errors are expected when the user cancels a stream.
-      // The agent handles most abort errors internally, but some
-      // may propagate from the async generator teardown.
-      const isAbort =
-        typeof err === "object" &&
-        err !== null &&
-        ((err as Error).message.includes("Request was aborted") ||
-          (err as Error).message.includes("AbortError") ||
-          (err as Error).name === "APIUserAbortError");
-      if (!isAbort) throw err;
+      if (!isAbortError(err)) throw err;
     }
-    this.eventEmitter.emit("message_end");
+    this.eventBus.emit("message_end");
   }
 
   cancel() {
     this.agent.cancel();
   }
 
-  async handleToolUseRequest(toolName: string, input: unknown) {
-    const description = getToolDescription(toolName, input);
-    const canUse = await this.canUseToolHandler?.({
-      toolName,
-      description,
-      input,
-    });
-    return canUse || false;
+  private handleEmitMessage(message: string) {
+    this.eventBus.emit("message_start", { role: "assistant" });
+    this.eventBus.emit("message_update", { text: message });
   }
 
-  async handleAskUserQuestion(
-    input: AskUserQuestionInput,
-  ): Promise<QuestionAnswer[]> {
-    if (!this.askUserQuestionHandler) {
-      return [];
-    }
-    return this.askUserQuestionHandler({ input });
-  }
-
-  handleEmitMessage(message: string) {
-    this.eventEmitter.emit("message_start", { role: "assistant" });
-    this.eventEmitter.emit("message_update", { text: message });
-  }
-
-  handleSaveToSessionMemory(key: string, value: unknown) {
-    this.memory[key] = value;
-  }
-
-  handleTokenUsage(
+  private handleTokenUsage(
     input_tokens: number,
     output_tokens: number,
     cache_creation_input_tokens?: number,
     cache_read_input_tokens?: number,
   ) {
-    const streamCost = TokenCostHelper.calculateCost(
+    this.costTracker.trackUsage(
       input_tokens,
       output_tokens,
       this.agent.model,
       cache_creation_input_tokens,
       cache_read_input_tokens,
-    ).totalCost;
-    this.totalCost += streamCost;
-    this.eventEmitter.emit("token_usage_update", {
-      cost: this.totalCost,
-      input_tokens,
-      output_tokens,
-    });
+    );
   }
 
   setModel(model: ModelId, provider?: Provider) {
@@ -278,27 +216,12 @@ export class Session {
 
   processDelta(delta: MessageDelta) {
     if (delta.type === "message_start") {
-      this.eventEmitter.emit("message_start", { role: delta.role });
+      this.eventBus.emit("message_start", { role: delta.role });
     }
 
     if (delta.type == "text_update") {
-      this.eventEmitter.emit("message_update", { text: delta.text });
+      this.eventBus.emit("message_update", { text: delta.text });
     }
-  }
-
-  computeEditDiff(input: ToolInputMap["edit"]): string {
-    const content = this.memory[input.path] as string;
-    return generateEditDiff(
-      input.path,
-      content,
-      input.old_string,
-      input.new_string,
-    );
-  }
-
-  computeWriteDiff(input: ToolInputMap["write"]): string {
-    const existingContent = this.memory[input.path] as string | undefined;
-    return generateWriteDiff(input.path, existingContent, input.content);
   }
 }
 

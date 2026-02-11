@@ -4,16 +4,7 @@ import type { PromptOptions } from "./types";
 import { Provider } from "./types";
 import { maybeSummarize } from "./summarizer";
 import { runToolCalls } from "./tool-runner";
-
-function isAbortError(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    ((err as Error).message.includes("Request was aborted") ||
-      (err as Error).message.includes("AbortError") ||
-      (err as Error).name === "APIUserAbortError")
-  );
-}
+import { isAbortError } from "./errors";
 
 export class Agent {
   private context: MessageParam[] = [];
