@@ -57,6 +57,8 @@ export namespace TokenCostHelper {
     inputTokens: number,
     outputTokens: number,
     model: string = "claude-sonnet-4-5-20250929",
+    cacheCreationInputTokens: number = 0,
+    cacheReadInputTokens: number = 0,
   ): TokenCost => {
     const pricing = MODEL_PRICING[model];
 
@@ -66,11 +68,16 @@ export namespace TokenCostHelper {
 
     const inputCost = (inputTokens / 1_000_000) * pricing.inputPerMillion;
     const outputCost = (outputTokens / 1_000_000) * pricing.outputPerMillion;
+    // Cache writes cost 25% more, cache reads cost 90% less
+    const cacheWriteCost =
+      (cacheCreationInputTokens / 1_000_000) * pricing.inputPerMillion * 1.25;
+    const cacheReadCost =
+      (cacheReadInputTokens / 1_000_000) * pricing.inputPerMillion * 0.1;
 
     return {
       inputCost,
       outputCost,
-      totalCost: inputCost + outputCost,
+      totalCost: inputCost + outputCost + cacheWriteCost + cacheReadCost,
     };
   };
 

@@ -21,7 +21,12 @@ interface PromptOptions {
   askUserQuestion?: (input: AskUserQuestionInput) => Promise<QuestionAnswer[]>;
   emitMessage?: (message: string) => void;
   saveToSessionMemory?: (key: string, value: unknown) => void;
-  updateTokenUsage?: (input_tokens: number, output_tokens: number) => void;
+  updateTokenUsage?: (
+    input_tokens: number,
+    output_tokens: number,
+    cache_creation_input_tokens?: number,
+    cache_read_input_tokens?: number,
+  ) => void;
 }
 
 export class Agent {
@@ -86,7 +91,12 @@ export class Agent {
         if (signal.aborted) return;
 
         const { message, usage } = await fullMessage();
-        updateTokenUsage?.(usage.input_tokens, usage.output_tokens);
+        updateTokenUsage?.(
+          usage.input_tokens,
+          usage.output_tokens,
+          usage.cache_creation_input_tokens,
+          usage.cache_read_input_tokens,
+        );
         this.contextTokens = usage.input_tokens; // Track current context size
 
         // Check if we need to summarize before continuing
@@ -141,7 +151,12 @@ export class Agent {
         this.model,
         tools,
       );
-      updateTokenUsage?.(usage.input_tokens, usage.output_tokens);
+      updateTokenUsage?.(
+        usage.input_tokens,
+        usage.output_tokens,
+        usage.cache_creation_input_tokens,
+        usage.cache_read_input_tokens,
+      );
 
       messages.push(message);
 

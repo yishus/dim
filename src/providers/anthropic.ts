@@ -63,13 +63,37 @@ export const AnthropicProvider: ProviderInterface = {
       apiKey: apiKey,
     });
 
+    const anthropicMessages = input.map(
+      message_param_to_anthropic_message_param,
+    );
+
+    // Add cache_control to the last content block of the last message
+    const lastMessage = anthropicMessages[anthropicMessages.length - 1];
+    if (lastMessage) {
+      const content = lastMessage.content;
+      if (Array.isArray(content) && content.length > 0) {
+        const lastBlock = content[content.length - 1]!;
+        (lastBlock as unknown as Record<string, unknown>).cache_control = {
+          type: "ephemeral",
+        };
+      }
+    }
+
     const stream = client.messages.stream(
       {
         max_tokens: 16384,
-        messages: input.map(message_param_to_anthropic_message_param),
+        messages: anthropicMessages,
         tools: tools?.map((tool) => tool_definition_to_anthropic_tool(tool)),
         model: model as AnthropicModelId,
-        system: systemPrompt,
+        system: systemPrompt
+          ? [
+              {
+                type: "text" as const,
+                text: systemPrompt,
+                cache_control: { type: "ephemeral" as const },
+              },
+            ]
+          : undefined,
       },
       { signal },
     );
@@ -172,6 +196,9 @@ const anthropic_message_to_message_response = (
     usage: {
       input_tokens: message.usage.input_tokens || 0,
       output_tokens: message.usage.output_tokens || 0,
+      cache_creation_input_tokens:
+        message.usage.cache_creation_input_tokens || 0,
+      cache_read_input_tokens: message.usage.cache_read_input_tokens || 0,
     },
   };
 };

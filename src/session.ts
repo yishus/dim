@@ -238,11 +238,18 @@ export class Session {
     this.memory[key] = value;
   }
 
-  handleTokenUsage(input_tokens: number, output_tokens: number) {
+  handleTokenUsage(
+    input_tokens: number,
+    output_tokens: number,
+    cache_creation_input_tokens?: number,
+    cache_read_input_tokens?: number,
+  ) {
     const streamCost = TokenCostHelper.calculateCost(
       input_tokens,
       output_tokens,
       this.agent.model,
+      cache_creation_input_tokens,
+      cache_read_input_tokens,
     ).totalCost;
     this.totalCost += streamCost;
     this.eventEmitter.emit("token_usage_update", {
