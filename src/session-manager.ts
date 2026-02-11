@@ -35,7 +35,7 @@ export class SessionManager {
   spawn(model: ModelId, options: SpawnOptions): AgentEntry {
     const { provider, toolNames, systemPrompt } = options;
     const id = `agent-${this.nextId++}`;
-    const agent = new Agent(model, provider, systemPrompt);
+    const agent = new Agent(model, provider, this, systemPrompt);
     const tools = getToolDefinitionsByName(toolNames);
     const entry = new AgentEntry(id, agent, tools);
     this.agents.set(id, entry);

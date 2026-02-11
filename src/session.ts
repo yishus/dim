@@ -141,6 +141,7 @@ export class Session {
     session.agent = new Agent(
       session.model,
       session.provider,
+      session.sessionManager,
       finalSystemPrompt,
       systemReminderStart,
     );
@@ -225,15 +226,3 @@ export class Session {
   }
 }
 
-let currentSession: Session | undefined;
-
-export function setSession(session: Session): void {
-  currentSession = session;
-}
-
-export function getSession(): Session {
-  if (!currentSession) {
-    throw new Error("Session not initialized");
-  }
-  return currentSession;
-}

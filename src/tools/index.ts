@@ -2,7 +2,7 @@ import type { Static } from "typebox";
 import type { ToolConfig, ToolDefinition, Tool } from "../types";
 import type { ExtensionTool } from "../types";
 import type { ExtensionRegistry } from "../extensions";
-import { getSession } from "../session";
+
 import askUserQuestion from "./ask-user-question";
 import bash from "./bash";
 import edit from "./edit";
@@ -59,7 +59,7 @@ export async function callTool(
     const extensionTool = extensionTools.get(name);
     if (extensionTool) {
       return await extensionTool.execute(input as never, {
-        sessionManager: getSession().sessionManager,
+        sessionManager: config.sessionManager,
         provider: config.provider,
         model: config.model,
       });

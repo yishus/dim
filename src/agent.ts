@@ -2,6 +2,7 @@ import { AI } from "./ai";
 import type { Message, MessageParam, ModelId } from "./types";
 import type { PromptOptions } from "./types";
 import { Provider } from "./types";
+import type { SessionManager } from "./session-manager";
 import { maybeSummarize } from "./summarizer";
 import { runToolCalls } from "./tool-runner";
 import { isAbortError } from "./errors";
@@ -14,6 +15,7 @@ export class Agent {
   constructor(
     public model: ModelId,
     public provider: Provider,
+    public sessionManager: SessionManager,
     public systemPrompt?: string,
     public systemReminderStart?: string,
   ) {}
@@ -93,9 +95,10 @@ export class Agent {
           break;
         }
 
+        const toolConfig = { provider: this.provider, model: this.model, sessionManager: this.sessionManager };
         const { resultMessage, interrupted } = await runToolCalls(
           message,
-          { provider: this.provider, model: this.model },
+          toolConfig,
           { canUseTool, askUserQuestion, emitMessage, saveToSessionMemory },
         );
         this.context.push(resultMessage);
@@ -141,9 +144,10 @@ export class Agent {
         return { message, text: this.textResponse(message) };
       }
 
+      const toolConfig = { provider: this.provider, model: this.model, sessionManager: this.sessionManager };
       const { resultMessage, interrupted } = await runToolCalls(
         message,
-        { provider: this.provider, model: this.model },
+        toolConfig,
         { canUseTool, askUserQuestion, emitMessage, saveToSessionMemory },
       );
       messages.push(resultMessage);
