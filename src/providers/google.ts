@@ -1,6 +1,7 @@
 import {
   GoogleGenAI,
   type Content,
+  type GenerateContentResponse,
   type Part,
   type FunctionDeclaration,
   type GenerateContentResponseUsageMetadata,
@@ -16,6 +17,7 @@ import type {
   StreamOptions,
   ToolDefinition,
 } from "../types";
+import { createStreamResult, type StreamAdapter } from "../streaming";
 
 export type { GoogleModelId } from "../types";
 
@@ -78,53 +80,51 @@ export const GoogleProvider: ProviderInterface = {
       },
     });
 
-    // Shared state accumulated by streamText
-    let accumulatedParts: Part[] = [];
-    let usageMetadata: GenerateContentResponseUsageMetadata = {};
-    let streamComplete: Promise<void>;
-    let resolveStreamComplete: () => void;
+    const adapter = createGoogleAdapter();
 
-    // Create a promise that resolves when streaming is complete
-    streamComplete = new Promise((resolve) => {
-      resolveStreamComplete = resolve;
-    });
+    // Wrap the async response into an AsyncIterable
+    async function* unwrapStream(): AsyncIterable<unknown> {
+      const response = await streamResponse;
+      yield* response;
+    }
 
-    return {
-      fullMessage: async function () {
-        // Wait for streamText to finish accumulating data
-        await streamComplete;
-        return google_response_to_message_response(
-          accumulatedParts,
-          usageMetadata,
-        );
-      },
-      streamText: async function* () {
-        let isFirst = true;
-
-        const response = await streamResponse;
-        for await (const chunk of response) {
-          accumulatedParts.push(
-            ...(chunk.candidates?.[0]?.content?.parts || []),
-          );
-          usageMetadata = chunk.usageMetadata || {};
-
-          if (chunk.text) {
-            if (isFirst) {
-              yield { type: "message_start", role: "assistant" } as MessageDelta;
-              isFirst = false;
-            }
-            yield {
-              type: "text_update",
-              text: chunk.text,
-            } as MessageDelta;
-          }
-        }
-
-        // Signal that streaming is complete
-        resolveStreamComplete();
-      },
-    };
+    return createStreamResult(adapter, unwrapStream());
   },
+};
+
+const createGoogleAdapter = (): StreamAdapter => {
+  let accumulatedParts: Part[] = [];
+  let usageMetadata: GenerateContentResponseUsageMetadata = {};
+
+  return {
+    async *toDeltas(providerStream: AsyncIterable<unknown>) {
+      let isFirst = true;
+
+      for await (const chunk of providerStream as AsyncIterable<GenerateContentResponse>) {
+        accumulatedParts.push(
+          ...(chunk.candidates?.[0]?.content?.parts || []),
+        );
+        usageMetadata = chunk.usageMetadata || {};
+
+        if (chunk.text) {
+          if (isFirst) {
+            yield { type: "message_start", role: "assistant" } as MessageDelta;
+            isFirst = false;
+          }
+          yield {
+            type: "text_update",
+            text: chunk.text,
+          } as MessageDelta;
+        }
+      }
+    },
+    toFullMessage() {
+      return google_response_to_message_response(
+        accumulatedParts,
+        usageMetadata,
+      );
+    },
+  };
 };
 
 const tool_to_function_declaration = (

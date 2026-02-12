@@ -7,9 +7,11 @@ interface Props {
 
 const MessageList = ({ messages }: Props) => (
   <>
-    {messages.map((message, index) => (
-      <Message key={index} message={message} index={index} />
-    ))}
+    {messages
+      .filter((message) => message.text)
+      .map((message, index) => (
+        <Message key={index} message={message} index={index} />
+      ))}
   </>
 );
 

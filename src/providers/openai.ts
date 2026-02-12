@@ -16,6 +16,7 @@ import type {
   StreamOptions,
   ToolDefinition,
 } from "../types";
+import { createStreamResult, type StreamAdapter } from "../streaming";
 
 export type { OpenAIModelId } from "../types";
 
@@ -78,61 +79,62 @@ export const OpenAIProvider: ProviderInterface = {
       { signal },
     );
 
-    // Accumulated state for full message
-    let accumulatedContent = "";
-    let accumulatedFunctionCalls: Map<
-      string,
-      { call_id: string; name: string; arguments: string }
-    > = new Map();
-    let finalUsage = { input_tokens: 0, output_tokens: 0 };
-    let streamComplete: Promise<void>;
-    let resolveStreamComplete: () => void;
+    const adapter = createOpenAIAdapter();
 
-    streamComplete = new Promise((resolve) => {
-      resolveStreamComplete = resolve;
-    });
+    // Wrap the async response into an AsyncIterable
+    async function* unwrapStream(): AsyncIterable<unknown> {
+      const stream = await streamResponse;
+      yield* stream;
+    }
 
-    return {
-      fullMessage: async function () {
-        await streamComplete;
-        return build_message_response(
-          accumulatedContent,
-          accumulatedFunctionCalls,
-          finalUsage,
-        );
-      },
-      streamText: async function* () {
-        let isFirst = true;
-        const stream = await streamResponse;
-
-        for await (const event of stream) {
-          const delta = process_stream_event(
-            event,
-            accumulatedFunctionCalls,
-            (text) => {
-              accumulatedContent += text;
-            },
-            (usage) => {
-              finalUsage = usage;
-            },
-          );
-
-          if (delta) {
-            if (isFirst) {
-              yield {
-                type: "message_start",
-                role: "assistant",
-              } as MessageDelta;
-              isFirst = false;
-            }
-            yield delta;
-          }
-        }
-
-        resolveStreamComplete();
-      },
-    };
+    return createStreamResult(adapter, unwrapStream());
   },
+};
+
+const createOpenAIAdapter = (): StreamAdapter => {
+  let accumulatedContent = "";
+  const accumulatedFunctionCalls = new Map<
+    string,
+    { call_id: string; name: string; arguments: string }
+  >();
+  let finalUsage = { input_tokens: 0, output_tokens: 0 };
+
+  return {
+    async *toDeltas(providerStream: AsyncIterable<unknown>) {
+      let isFirst = true;
+
+      for await (const event of providerStream as AsyncIterable<ResponseStreamEvent>) {
+        const delta = process_stream_event(
+          event,
+          accumulatedFunctionCalls,
+          (text) => {
+            accumulatedContent += text;
+          },
+          (usage) => {
+            finalUsage = usage;
+          },
+        );
+
+        if (delta) {
+          if (isFirst) {
+            yield {
+              type: "message_start",
+              role: "assistant",
+            } as MessageDelta;
+            isFirst = false;
+          }
+          yield delta;
+        }
+      }
+    },
+    toFullMessage() {
+      return build_message_response(
+        accumulatedContent,
+        accumulatedFunctionCalls,
+        finalUsage,
+      );
+    },
+  };
 };
 
 const process_stream_event = (

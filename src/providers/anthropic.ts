@@ -16,6 +16,7 @@ import type {
   StreamOptions,
   ToolDefinition,
 } from "../types";
+import { createStreamResult, type StreamAdapter } from "../streaming";
 
 export type { AnthropicModelId } from "../types";
 
@@ -97,19 +98,24 @@ export const AnthropicProvider: ProviderInterface = {
       { signal },
     );
 
-    return {
-      fullMessage: async function () {
-        const message: AnthropicMessage = await stream.finalMessage();
-        return anthropic_message_to_message_response(message);
-      },
-      streamText: async function* () {
-        for await (const event of stream) {
-          yield anthropic_delta_to_message_delta(event);
-        }
-      },
-    };
+    const adapter = createAnthropicAdapter(stream);
+    return createStreamResult(adapter, stream);
   },
 };
+
+const createAnthropicAdapter = (
+  stream: ReturnType<InstanceType<typeof Anthropic>["messages"]["stream"]>,
+): StreamAdapter => ({
+  async *toDeltas(providerStream: AsyncIterable<unknown>) {
+    for await (const event of providerStream as AsyncIterable<RawMessageStreamEvent>) {
+      yield anthropic_delta_to_message_delta(event);
+    }
+  },
+  async toFullMessage() {
+    const message: AnthropicMessage = await stream.finalMessage();
+    return anthropic_message_to_message_response(message);
+  },
+});
 
 const anthropic_delta_to_message_delta = (
   event: RawMessageStreamEvent,
