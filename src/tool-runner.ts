@@ -9,6 +9,7 @@ import {
   type ToolInputMap,
   type AskUserQuestionInput,
 } from "./tools";
+import { getLogger } from "./services/logger";
 
 export type { ToolRunnerCallbacks };
 
@@ -104,6 +105,8 @@ export async function runToolCalls(
           }
         }
         emitMessage?.(`${name} ${getToolDescription(name, input)}`);
+        
+        getLogger().logToolCall({ type: "tool_use", id, name, input });
 
         // Special handling for askUserQuestion tool
         if (name === "askUserQuestion" && askUserQuestion) {
@@ -115,14 +118,26 @@ export async function runToolCalls(
             name,
             content: [{ type: "text" as const, text: result }],
           });
+          
+          getLogger().logToolResult(id, result);
           continue;
         }
 
-        const result = await callTool(name, input, config);
-        if (name === "read") {
-          const readInput = input as ToolInputMap["read"];
-          saveToSessionMemory?.(readInput.path, result);
+        let result: string;
+        let error: Error | undefined;
+        try {
+          result = await callTool(name, input, config);
+          if (name === "read") {
+            const readInput = input as ToolInputMap["read"];
+            saveToSessionMemory?.(readInput.path, result);
+          }
+        } catch (err) {
+          error = err as Error;
+          result = `Error: ${error.message}`;
         }
+        
+        getLogger().logToolResult(id, error ? undefined : result, error);
+        
         responses.push({
           id,
           name,

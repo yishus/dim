@@ -6,6 +6,7 @@ import type { SessionManager } from "./session-manager";
 import { maybeSummarize } from "./summarizer";
 import { runToolCalls } from "./tool-runner";
 import { isAbortError } from "./errors";
+import { getLogger } from "./services/logger";
 
 export class Agent {
   private context: MessageParam[] = [];
@@ -46,7 +47,13 @@ export class Agent {
     }
 
     if (input) {
-      this.context.push(this.nextMessage(input));
+      const userMessage = this.nextMessage(input);
+      this.context.push(userMessage);
+      
+      getLogger().logMessage(userMessage, {
+        model: this.model,
+        provider: this.provider,
+      });
     }
 
     this.abortController = new AbortController();
@@ -77,6 +84,16 @@ export class Agent {
           usage.cache_read_input_tokens,
         );
         this.contextTokens = usage.input_tokens; // Track current context size
+        
+        getLogger().logMessage(message, {
+          model: this.model,
+          provider: this.provider,
+          tokens: {
+            input: usage.input_tokens,
+            output: usage.output_tokens,
+            total: usage.input_tokens + usage.output_tokens,
+          },
+        });
 
         // Check if we need to summarize before continuing
         const summarizeResult = await maybeSummarize(
@@ -88,6 +105,8 @@ export class Agent {
         if (summarizeResult) {
           this.context = summarizeResult.context;
           this.contextTokens = summarizeResult.contextTokens;
+          
+          getLogger().logSummary(this.contextTokens, summarizeResult.contextTokens);
         }
 
         this.context.push(message);

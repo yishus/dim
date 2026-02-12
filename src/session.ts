@@ -30,6 +30,7 @@ import { CostTracker } from "./services/cost-tracker";
 import { FileMemoryService } from "./services/file-memory";
 import { ExtensionService } from "./services/extension-service";
 import { ToolService } from "./services/tool-service";
+import { Logger, initializeLogger } from "./services/logger";
 
 export type { ModelId, ProviderModel, UIMessage, ToolUseRequest, AskUserQuestionRequest, QuestionAnswer };
 export { Provider };
@@ -63,11 +64,16 @@ export class Session {
   extensions = new ExtensionService();
   toolService = new ToolService();
   sessionManager = new SessionManager();
+  logger!: Logger;
 
   private constructor() {}
 
   static async create(): Promise<Session> {
     const session = new Session();
+
+    // Initialize logger
+    session.logger = initializeLogger();
+    session.logger.info("Session", "Creating new session");
 
     // Load extensions
     await session.extensions.load();
@@ -154,6 +160,8 @@ export class Session {
   }
 
   async prompt(input: string) {
+    this.logger.info("Session", "Processing prompt", { length: input.length });
+    
     const stream = this.agent.stream(input, {
       tools: getAllToolDefinitions(),
       canUseTool: this.toolService.requestToolApproval.bind(this.toolService),
@@ -166,8 +174,13 @@ export class Session {
       for await (const event of stream) {
         this.processDelta(event);
       }
+      this.logger.info("Session", "Prompt processing completed");
     } catch (err) {
-      if (!isAbortError(err)) throw err;
+      if (!isAbortError(err)) {
+        this.logger.error("Session", "Error processing prompt", { error: err });
+        throw err;
+      }
+      this.logger.info("Session", "Prompt processing cancelled");
     }
     this.eventBus.emit("message_end");
   }
@@ -194,6 +207,16 @@ export class Session {
       cache_creation_input_tokens,
       cache_read_input_tokens,
     );
+    
+    // Log token usage
+    const totalCost = this.costTracker.getTotalCost();
+    this.logger.debug("Session", "Token usage updated", {
+      input_tokens,
+      output_tokens,
+      cache_creation_input_tokens,
+      cache_read_input_tokens,
+      totalCost,
+    });
   }
 
   setModel(model: ModelId, provider?: Provider) {
