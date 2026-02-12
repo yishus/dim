@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Collapsible transition */
+.collapsible-content {
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+}
+
+/* JSON syntax highlighting */
+.json-key { color: #7dd3fc; }
+.json-string { color: #86efac; }
+.json-number { color: #fde68a; }
+.json-boolean { color: #c4b5fd; }
+.json-null { color: #a1a1aa; }
+
+/* Code block */
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

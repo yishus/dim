@@ -12,7 +12,9 @@
     "start": "bun run src/index.tsx",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "logs:build": "cd web && bun install && bunx @tailwindcss/cli -i src/styles.css -o dist/styles.css && bun build src/index.tsx --outdir dist",
+    "logs": "bun run web/server.ts"
   },
   "keywords": [
     "ai",
