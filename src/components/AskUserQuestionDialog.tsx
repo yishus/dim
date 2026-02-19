@@ -23,17 +23,44 @@ interface QuestionState {
 }
 
 const AskUserQuestionDialog = ({ input, onSubmit, onCancel }: Props) => {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [questionStates, setQuestionStates] = useState<QuestionState[]>(
+  const makeInitialStates = (): QuestionState[] =>
     input.questions.map(() => ({
       selectedIndices: new Set<number>(),
       showOtherInput: false,
       otherText: "",
-    })),
+    }));
+
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [questionStates, setQuestionStates] = useState<QuestionState[]>(
+    makeInitialStates,
   );
   const [isEditingOther, setIsEditingOther] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const selectRef = useRef<SelectRenderable>(null);
+  const confirmRef = useRef<SelectRenderable>(null);
   const textareaRef = useRef<TextareaRenderable>(null);
+
+  const compileAnswers = (
+    states: QuestionState[] = questionStates,
+  ): QuestionAnswer[] =>
+    input.questions.map((q, qIdx) => {
+      const state = states[qIdx]!;
+      const selectedLabels = Array.from(state.selectedIndices).map(
+        (idx) => q.options[idx]!.label,
+      );
+      return {
+        question: q.question,
+        selectedLabels,
+        customText: state.showOtherInput ? state.otherText : undefined,
+      };
+    });
+
+  const resetAndRestart = () => {
+    setQuestionStates(makeInitialStates());
+    setCurrentQuestionIndex(0);
+    setShowConfirmation(false);
+    setIsEditingOther(false);
+  };
 
   const currentQuestion = input.questions[currentQuestionIndex]!;
   const currentState = questionStates[currentQuestionIndex]!;
@@ -117,19 +144,8 @@ const AskUserQuestionDialog = ({ input, onSubmit, onCancel }: Props) => {
       setCurrentQuestionIndex((prev) => prev + 1);
       setIsEditingOther(false);
     } else {
-      // All questions answered, compile results
-      const answers: QuestionAnswer[] = input.questions.map((q, qIdx) => {
-        const state = questionStates[qIdx]!;
-        const selectedLabels = Array.from(state.selectedIndices).map(
-          (idx) => q.options[idx]!.label,
-        );
-        return {
-          question: q.question,
-          selectedLabels,
-          customText: state.showOtherInput ? state.otherText : undefined,
-        };
-      });
-      onSubmit(answers);
+      setIsEditingOther(false);
+      setShowConfirmation(true);
     }
   };
 
@@ -151,33 +167,41 @@ const AskUserQuestionDialog = ({ input, onSubmit, onCancel }: Props) => {
     });
     setIsEditingOther(false);
 
-    // For single-select, auto-submit after entering custom text
+    // For single-select, auto-advance after entering custom text
     if (!currentQuestion.multiSelect) {
-      // Need to compute answers with the updated state directly
       if (currentQuestionIndex < input.questions.length - 1) {
         setCurrentQuestionIndex((prev) => prev + 1);
       } else {
-        // All questions answered, compile results with the updated state
-        const answers: QuestionAnswer[] = input.questions.map((q, qIdx) => {
-          const state =
-            qIdx === currentQuestionIndex
-              ? updatedState
-              : questionStates[qIdx]!;
-          const selectedLabels = Array.from(state.selectedIndices).map(
-            (idx) => q.options[idx]!.label,
-          );
-          return {
-            question: q.question,
-            selectedLabels,
-            customText: state.showOtherInput ? state.otherText : undefined,
-          };
-        });
-        onSubmit(answers);
+        setShowConfirmation(true);
       }
     }
   };
 
   useKeyboard((key) => {
+    if (showConfirmation) {
+      if (key.name === "escape") {
+        resetAndRestart();
+        return;
+      }
+      if (key.name === "down") {
+        confirmRef.current?.moveDown();
+        return;
+      }
+      if (key.name === "up") {
+        confirmRef.current?.moveUp();
+        return;
+      }
+      if (key.name === "return") {
+        const value = confirmRef.current?.getSelectedOption()?.value;
+        if (value === "yes") {
+          onSubmit(compileAnswers());
+        } else if (value === "no") {
+          resetAndRestart();
+        }
+      }
+      return;
+    }
+
     if (isEditingOther) {
       if (key.name === "escape") {
         setIsEditingOther(false);
@@ -231,6 +255,53 @@ const AskUserQuestionDialog = ({ input, onSubmit, onCancel }: Props) => {
   const hasSelection =
     currentState.selectedIndices.size > 0 ||
     (currentState.showOtherInput && currentState.otherText);
+
+  if (showConfirmation) {
+    const answers = compileAnswers();
+    const confirmOptions: SelectOption[] = [
+      { name: "Yes", description: "Submit these answers", value: "yes" },
+      { name: "No", description: "Start over from question 1", value: "no" },
+    ];
+
+    return (
+      <box
+        borderColor={THEME.colors.border.default}
+        style={{ padding: 1 }}
+        border={["left"]}
+      >
+        <text fg={THEME.colors.text.primary} style={{ marginBottom: 1 }}>
+          Summary of your answers:
+        </text>
+        {answers.map((answer, idx) => (
+          <box key={idx} style={{ marginBottom: 1 }}>
+            <text fg={THEME.colors.text.muted}>
+              {idx + 1}. {answer.question}
+            </text>
+            {answer.selectedLabels.length > 0 && (
+              <text fg={THEME.colors.text.secondary}>
+                {"   "}
+                {answer.selectedLabels.join(", ")}
+              </text>
+            )}
+            {answer.customText && (
+              <text fg={THEME.colors.text.secondary}>
+                {"   "}Other: {answer.customText}
+              </text>
+            )}
+          </box>
+        ))}
+        <text fg={THEME.colors.text.primary} style={{ marginTop: 1 }}>
+          Proceed with these answers?
+        </text>
+        <select
+          style={{ height: 6 }}
+          options={confirmOptions}
+          focused={false}
+          ref={confirmRef}
+        />
+      </box>
+    );
+  }
 
   return (
     <box
