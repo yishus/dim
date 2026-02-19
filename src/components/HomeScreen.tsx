@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
@@ -65,7 +65,10 @@ function discoverExtensions(): ExtensionEntry[] {
 const defaultSyntaxStyle = SyntaxStyle.fromStyles(githubDark);
 
 interface Props {
-  initialPromptSubmitted: (prompt: string) => void;
+  initialPromptSubmitted: (
+    prompt: string,
+    modelId: string,
+  ) => void | Promise<void>;
   onExit: () => void;
   warning?: string;
 }
@@ -93,6 +96,7 @@ const HomeScreen = (props: Props) => {
   const [showChatPopup, setShowChatPopup] = useState(false);
   const [popupFocus, setPopupFocus] = useState<"prompt" | "model">("prompt");
   const [selectedModel, setSelectedModel] = useState(0);
+  const textareaRef = useRef<import("@opentui/core").TextareaRenderable>(null);
 
   const allModels: SelectItem[] = useMemo(() => {
     const items: SelectItem[] = [];
@@ -149,10 +153,12 @@ const HomeScreen = (props: Props) => {
         setShowChatPopup(false);
       } else if (key.name === "tab") {
         setPopupFocus((f) => (f === "prompt" ? "model" : "prompt"));
+      } else if (key.name === "return" && !key.meta && !key.shift) {
+        handleChatSubmit();
       }
       return;
     }
-    if (key.name === "a" && activePanel === "sessions") {
+    if (key.name === "a") {
       setShowChatPopup(true);
       setPopupFocus("prompt");
       return;
@@ -277,9 +283,13 @@ const HomeScreen = (props: Props) => {
     </box>
   );
 
-  const handleChatSubmit = (text: string) => {
+  const handleChatSubmit = () => {
+    const text = textareaRef.current?.plainText?.trim();
+    if (!text) return;
+    const modelId = allModels[selectedModel]?.key ?? allModels[0]!.key;
+    textareaRef.current?.clear();
     setShowChatPopup(false);
-    props.initialPromptSubmitted(text);
+    props.initialPromptSubmitted(text, modelId);
   };
 
   return (
@@ -390,7 +400,14 @@ const HomeScreen = (props: Props) => {
               marginBottom={1}
               title="new session prompt"
             >
-              <textarea focused={popupFocus === "prompt"} />
+              <textarea
+                ref={textareaRef}
+                focused={popupFocus === "prompt"}
+                keyBindings={[
+                  { name: "return", meta: true, action: "newline" as const },
+                  { name: "return", shift: true, action: "newline" as const },
+                ]}
+              />
             </box>
             <box
               border={true}
@@ -399,6 +416,7 @@ const HomeScreen = (props: Props) => {
                 popupFocus === "model" ? ACTIVE_BORDER_COLOR : undefined
               }
               title="model"
+              style={{ maxHeight: 5 }}
             >
               <Select
                 items={allModels}
@@ -406,6 +424,7 @@ const HomeScreen = (props: Props) => {
                 selectedIndex={selectedModel}
                 onSelectedChange={setSelectedModel}
                 emptyText="No models"
+                persistSelection
               />
             </box>
           </box>

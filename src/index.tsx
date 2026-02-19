@@ -3,11 +3,10 @@ import { useState } from "react";
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 
-import { Session } from "./session";
+import { ALL_MODELS, Session } from "./session";
+import type { ModelId } from "./session";
 import HomeScreen from "./components/HomeScreen";
 import CodingAgent from "./components/CodingAgent";
-
-const session = await Session.create();
 
 interface AppProps {
   onExit: () => void;
@@ -18,9 +17,20 @@ const App = ({ onExit }: AppProps) => {
     "startup",
   );
   const [initialPrompt, setInitialPrompt] = useState<string>("");
-  const handleInitialPromptSubmitted = (prompt: string) => {
-    setSessionState("started");
+  const [session, setSession] = useState<Session | null>(null);
+
+  const handleInitialPromptSubmitted = async (
+    prompt: string,
+    modelId: string,
+  ) => {
+    const newSession = await Session.create();
+    const model = ALL_MODELS.find((m) => m.id === modelId);
+    if (model) {
+      newSession.setModel(model.id as ModelId, model.provider);
+    }
+    setSession(newSession);
     setInitialPrompt(prompt);
+    setSessionState("started");
   };
 
   return (
@@ -31,7 +41,7 @@ const App = ({ onExit }: AppProps) => {
           onExit={onExit}
         />
       )}
-      {sessionState == "started" && (
+      {sessionState == "started" && session && (
         <CodingAgent
           session={session}
           userPrompt={initialPrompt}

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useKeyboard } from "@opentui/react";
 import { THEME } from "../theme";
 
@@ -13,6 +14,7 @@ interface Props {
   selectedIndex: number;
   onSelectedChange: (index: number) => void;
   emptyText?: string;
+  persistSelection?: boolean;
 }
 
 const Select = ({
@@ -21,7 +23,10 @@ const Select = ({
   selectedIndex,
   onSelectedChange,
   emptyText = "No items",
+  persistSelection = false,
 }: Props) => {
+  const scrollRef = useRef<any>(null);
+
   useKeyboard((key) => {
     if (!active || items.length === 0) return;
     if (key.name === "up") {
@@ -31,10 +36,23 @@ const Select = ({
     }
   });
 
+  useEffect(() => {
+    const sb = scrollRef.current;
+    if (!sb) return;
+    const viewportHeight = sb.viewport?.height ?? 0;
+    if (viewportHeight === 0) return;
+    const scrollTop = sb.scrollTop ?? 0;
+    if (selectedIndex < scrollTop) {
+      sb.scrollTo(selectedIndex);
+    } else if (selectedIndex >= scrollTop + viewportHeight) {
+      sb.scrollTo(selectedIndex - viewportHeight + 1);
+    }
+  }, [selectedIndex]);
+
   return (
-    <scrollbox>
+    <scrollbox ref={scrollRef}>
       {items.map((item, i) => {
-        const isSelected = active && i === selectedIndex;
+        const isSelected = (active || persistSelection) && i === selectedIndex;
         return (
           <box
             key={item.key}
