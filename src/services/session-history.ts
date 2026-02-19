@@ -1,6 +1,6 @@
 import { join } from "path";
 import { homedir } from "os";
-import { readdirSync, readFileSync } from "fs";
+import { readdirSync, readFileSync, statSync } from "fs";
 import type { ConversationLogEntry } from "./logger";
 import type { UIMessage } from "../types";
 
@@ -15,6 +15,11 @@ function extractText(content: unknown): string {
   return "";
 }
 
+function getProjectLogDir(): string {
+  const projectId = process.cwd().replace(/[/\\]/g, "_").replace(/:/g, "_");
+  return join(homedir(), ".dim", "logs", projectId);
+}
+
 export interface SessionSummary {
   sessionId: string;
   title: string;
@@ -22,33 +27,34 @@ export interface SessionSummary {
 }
 
 export function getRecentSessions(limit = 10): SessionSummary[] {
-  const logDir = join(homedir(), ".dim", "logs");
+  const logDir = getProjectLogDir();
 
-  let logFiles: string[];
+  let logFiles: { name: string; mtime: Date }[];
   try {
     logFiles = readdirSync(logDir)
-      .filter((f) => f.startsWith("conversation-") && f.endsWith(".jsonl"))
-      .sort()
-      .reverse();
+      .filter((f) => f.endsWith(".jsonl") && !f.startsWith("debug-"))
+      .map((f) => ({ name: f, mtime: statSync(join(logDir, f)).mtime }))
+      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
   } catch {
     return [];
   }
 
-  // sessionId -> { title, lastActivity }
-  const sessions = new Map<
-    string,
-    { title: string; lastActivity: string }
-  >();
+  const sessions: SessionSummary[] = [];
 
   for (const file of logFiles) {
-    if (sessions.size >= limit) break;
+    if (sessions.length >= limit) break;
+
+    const sessionId = file.name.replace(".jsonl", "");
 
     let content: string;
     try {
-      content = readFileSync(join(logDir, file), "utf8");
+      content = readFileSync(join(logDir, file.name), "utf8");
     } catch {
       continue;
     }
+
+    let title = "";
+    let lastActivity = file.mtime;
 
     const lines = content.split("\n").filter(Boolean);
     for (const line of lines) {
@@ -59,77 +65,58 @@ export function getRecentSessions(limit = 10): SessionSummary[] {
         continue;
       }
 
-      const existing = sessions.get(entry.sessionId);
-
-      // Track last activity
-      if (!existing) {
-        sessions.set(entry.sessionId, {
-          title: "",
-          lastActivity: entry.timestamp,
-        });
-      } else if (entry.timestamp > existing.lastActivity) {
-        existing.lastActivity = entry.timestamp;
-      }
-
       // Use first user message as title
-      const session = sessions.get(entry.sessionId)!;
-      if (!session.title && entry.type === "message" && entry.role === "user") {
+      if (!title && entry.type === "message" && entry.role === "user") {
         const text = extractText(entry.content);
         if (text) {
-          session.title = text.length > 60 ? text.slice(0, 57) + "..." : text;
+          title = text.length > 60 ? text.slice(0, 57) + "..." : text;
         }
       }
+
+      // Track last timestamp
+      if (entry.timestamp) {
+        const ts = new Date(entry.timestamp);
+        if (ts > lastActivity) lastActivity = ts;
+      }
     }
+
+    sessions.push({
+      sessionId,
+      title: title || "Untitled session",
+      lastActivity,
+    });
   }
 
-  return Array.from(sessions.entries())
-    .map(([sessionId, data]) => ({
-      sessionId,
-      title: data.title || "Untitled session",
-      lastActivity: new Date(data.lastActivity),
-    }))
-    .sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime())
-    .slice(0, limit);
+  return sessions;
 }
 
 export function getSessionMessages(sessionId: string): UIMessage[] {
-  const logDir = join(homedir(), ".dim", "logs");
+  const logDir = getProjectLogDir();
+  const filePath = join(logDir, `${sessionId}.jsonl`);
 
-  let logFiles: string[];
+  let content: string;
   try {
-    logFiles = readdirSync(logDir)
-      .filter((f) => f.startsWith("conversation-") && f.endsWith(".jsonl"))
-      .sort();
+    content = readFileSync(filePath, "utf8");
   } catch {
     return [];
   }
 
   const messages: UIMessage[] = [];
+  const lines = content.split("\n").filter(Boolean);
 
-  for (const file of logFiles) {
-    let content: string;
+  for (const line of lines) {
+    let entry: ConversationLogEntry;
     try {
-      content = readFileSync(join(logDir, file), "utf8");
+      entry = JSON.parse(line);
     } catch {
       continue;
     }
 
-    const lines = content.split("\n").filter(Boolean);
-    for (const line of lines) {
-      let entry: ConversationLogEntry;
-      try {
-        entry = JSON.parse(line);
-      } catch {
-        continue;
-      }
+    if (entry.type !== "message" || !entry.role) continue;
 
-      if (entry.sessionId !== sessionId) continue;
-      if (entry.type !== "message" || !entry.role) continue;
-
-      const text = extractText(entry.content);
-      if (text) {
-        messages.push({ role: entry.role, text });
-      }
+    const text = extractText(entry.content);
+    if (text) {
+      messages.push({ role: entry.role, text });
     }
   }
 

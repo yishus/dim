@@ -2,6 +2,7 @@ import { mkdir } from "fs/promises";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { execSync } from "child_process";
+import { randomUUID } from "crypto";
 import { platform, release, tmpdir } from "os";
 
 import {
@@ -32,7 +33,14 @@ import { ExtensionService } from "./services/extension-service";
 import { ToolService } from "./services/tool-service";
 import { Logger, initializeLogger } from "./services/logger";
 
-export type { ModelId, ProviderModel, UIMessage, ToolUseRequest, AskUserQuestionRequest, QuestionAnswer };
+export type {
+  ModelId,
+  ProviderModel,
+  UIMessage,
+  ToolUseRequest,
+  AskUserQuestionRequest,
+  QuestionAnswer,
+};
 export { Provider };
 
 export const ALL_MODELS: ProviderModel[] = [
@@ -55,6 +63,7 @@ function tryExecSync(cmd: string, fallback: string = ""): string {
 }
 
 export class Session {
+  readonly id = randomUUID();
   agent!: Agent;
   model: ModelId = DEFAULT_ANTHROPIC_MODEL;
   provider: Provider = Provider.Anthropic;
@@ -71,9 +80,8 @@ export class Session {
   static async create(): Promise<Session> {
     const session = new Session();
 
-    // Initialize logger
-    session.logger = initializeLogger();
-    session.logger.info("Session", "Creating new session");
+    session.logger = initializeLogger(session.id);
+    session.logger.info("Session", "Creating new session", { id: session.id });
 
     // Load extensions
     await session.extensions.load();
@@ -115,9 +123,7 @@ export class Session {
     const branch = isGitRepo
       ? tryExecSync("git rev-parse --abbrev-ref HEAD", "unknown")
       : "unknown";
-    const gitStatus = isGitRepo
-      ? tryExecSync("git status -s")
-      : "";
+    const gitStatus = isGitRepo ? tryExecSync("git status -s") : "";
     const recentCommits = isGitRepo
       ? tryExecSync('git log -n 5 --pretty=format:"%h %s"')
       : "";
@@ -161,7 +167,7 @@ export class Session {
 
   async prompt(input: string) {
     this.logger.info("Session", "Processing prompt", { length: input.length });
-    
+
     const stream = this.agent.stream(input, {
       tools: getAllToolDefinitions(),
       canUseTool: this.toolService.requestToolApproval.bind(this.toolService),
@@ -207,7 +213,7 @@ export class Session {
       cache_creation_input_tokens,
       cache_read_input_tokens,
     );
-    
+
     // Log token usage
     const totalCost = this.costTracker.getTotalCost();
     this.logger.debug("Session", "Token usage updated", {
@@ -248,4 +254,3 @@ export class Session {
     }
   }
 }
-

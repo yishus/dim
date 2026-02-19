@@ -5,6 +5,7 @@ export const THEME = {
     border: {
       default: "#444444",
       focus: "#888888",
+      active: "#FFA500",
     },
     text: {
       primary: "#FFFFFF",

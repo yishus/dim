@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Session,
@@ -10,16 +10,17 @@ import {
   Provider,
 } from "../session";
 import { PROVIDER_DISPLAY_NAMES } from "../providers";
+import { TextareaRenderable } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
-import ChatTextbox from "./ChatTextbox";
 import MessageList from "./MessageList";
 import ToolUseRequestDialog from "./ToolUseRequestDialog";
 import AskUserQuestionDialog from "./AskUserQuestionDialog";
-import ModelSelectorDialog from "./ModelSelectorDialog";
+import Select from "./Select";
+import type { SelectItem } from "./Select";
 import type { AskUserQuestionInput } from "../tools";
 import LoadingIndicator from "./LoadingIndicator";
-import StatusBar from "./StatusBar";
 import { useSessionEvents } from "../hooks/useSessionEvents";
+import { THEME } from "../theme";
 
 interface Props {
   session: Session;
@@ -27,19 +28,18 @@ interface Props {
   onExit: () => void;
 }
 
+const LEFT_PANELS = ["status", "steps", "tasks", "tools", "reply"] as const;
+type LeftPanel = (typeof LEFT_PANELS)[number];
+const PANEL_TITLES: Record<LeftPanel, string> = {
+  status: "[1] status",
+  steps: "[2] steps",
+  tasks: "[3] tasks",
+  tools: "[4] tools",
+  reply: "[5] reply",
+};
+
 const CodingAgent = (props: Props) => {
   const { session, userPrompt, onExit } = props;
-
-  const extensionCommands = session.extensions.getCommands();
-  const allCommands = [
-    { name: "/model", description: "Select AI model", value: "model" },
-    { name: "/exit", description: "Exit the application", value: "exit" },
-    ...extensionCommands.map((cmd) => ({
-      name: cmd.name,
-      description: cmd.description,
-      value: cmd.value,
-    })),
-  ];
 
   const { messages, setMessages, tokenUsage, isLoading, setIsLoading } =
     useSessionEvents(session);
@@ -61,13 +61,76 @@ const CodingAgent = (props: Props) => {
   } | null>(null);
   const isLoadingRef = useRef(false);
   isLoadingRef.current = isLoading;
+  const [activePanel, setActivePanel] = useState<LeftPanel>("reply");
+  const [selectedModel, setSelectedModel] = useState(0);
+  const textareaRef = useRef<TextareaRenderable>(null);
+
+  const modelItems: SelectItem[] = useMemo(
+    () =>
+      ALL_MODELS.map((m) => ({
+        key: `${m.provider}:${m.id}`,
+        label: `${m.name} (${PROVIDER_DISPLAY_NAMES[m.provider]})`,
+      })),
+    [],
+  );
 
   useKeyboard(
-    useCallback((key) => {
-      if (key.name === "escape" && isLoadingRef.current) {
-        session.cancel();
-      }
-    }, [session]),
+    useCallback(
+      (key) => {
+        if (key.name === "escape" && isLoadingRef.current) {
+          session.cancel();
+        }
+        // Tab / Shift+Tab to cycle panels
+        if (key.name === "tab") {
+          setActivePanel((prev) => {
+            const idx = LEFT_PANELS.indexOf(prev);
+            const next = key.shift
+              ? (idx - 1 + LEFT_PANELS.length) % LEFT_PANELS.length
+              : (idx + 1) % LEFT_PANELS.length;
+            return LEFT_PANELS[next] ?? prev;
+          });
+        }
+
+        if (key.name === "q") {
+          onExit();
+        }
+      },
+      [session],
+    ),
+  );
+
+  useKeyboard(
+    useCallback(
+      (key) => {
+        // Number keys 1-5 to jump directly
+        const num = parseInt(key.name, 10);
+        if (activePanel !== "reply" && num >= 1 && num <= LEFT_PANELS.length) {
+          const panel = LEFT_PANELS[num - 1];
+          if (panel) {
+            setActivePanel(panel);
+          }
+        }
+        // Model selector popup controls
+        if (showModelSelector) {
+          if (key.name === "escape") {
+            setShowModelSelector(false);
+          } else if (key.name === "return") {
+            const selected = modelItems[selectedModel];
+            if (selected) {
+              const [provider, ...rest] = selected.key.split(":");
+              const model = rest.join(":");
+              handleModelSelect(model as ModelId, provider as Provider);
+            }
+          }
+          return;
+        }
+        // "m" in status panel opens model selector
+        if (activePanel === "status" && key.name === "m") {
+          setShowModelSelector(true);
+        }
+      },
+      [activePanel, showModelSelector, selectedModel, modelItems],
+    ),
   );
 
   useEffect(() => {
@@ -131,25 +194,14 @@ const CodingAgent = (props: Props) => {
     setShowModelSelector(false);
   };
 
-  const handleModelCancel = () => {
-    setShowModelSelector(false);
+  const handleTextareaSubmit = () => {
+    const text = textareaRef.current?.plainText?.trim();
+    if (!text) return;
+    textareaRef.current?.clear();
+    handleSubmit(text);
   };
 
   const handleSubmit = (submittedText: string) => {
-    if (submittedText === "/exit" || submittedText === "exit") {
-      onExit();
-      return;
-    }
-    if (submittedText === "/model") {
-      setShowModelSelector(true);
-      return;
-    }
-    // Check extension commands
-    const extCmd = extensionCommands.find((cmd) => cmd.name === submittedText);
-    if (extCmd) {
-      extCmd.execute();
-      return;
-    }
     setMessages((prevMessages) => [
       ...prevMessages,
       { role: "user", text: submittedText },
@@ -158,53 +210,198 @@ const CodingAgent = (props: Props) => {
     session.prompt(submittedText);
   };
 
+  const renderStatusKeybindings = () => (
+    <box style={{ width: "100%", flexShrink: 0 }}>
+      <text>m: Switch model</text>
+    </box>
+  );
+
   const currentModelName =
     ALL_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
   const currentProviderName = PROVIDER_DISPLAY_NAMES[currentProvider];
 
   return (
-    <box style={{ padding: 1 }}>
-      <scrollbox
-        style={{ flexGrow: 1, padding: 1 }}
-        stickyScroll={true}
-        stickyStart="bottom"
-      >
-        <MessageList messages={messages} />
-        {showToolUseRequest && toolUseRequestRef.current && (
-          <ToolUseRequestDialog
-            request={toolUseRequestRef.current}
-            session={session}
-            onSelect={handleToolUseSelect}
+    <box style={{ flexDirection: "column" }} position="relative">
+      <box style={{ flexDirection: "row", flexGrow: 1 }}>
+        <box style={{ width: "40%", flexDirection: "column" }}>
+          <box
+            border={true}
+            borderStyle="rounded"
+            title={PANEL_TITLES.status}
+            borderColor={
+              activePanel === "status" ? THEME.colors.border.active : undefined
+            }
+            style={{ flexGrow: 1 }}
+          >
+            <box style={{ flexDirection: "row" }}>
+              <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+                Session
+              </text>
+              <text fg={THEME.colors.text.primary}>{session.id}</text>
+            </box>
+            <box style={{ flexDirection: "row" }}>
+              <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+                Provider
+              </text>
+              <text fg={THEME.colors.text.primary}>{currentProviderName}</text>
+            </box>
+            <box style={{ flexDirection: "row" }}>
+              <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+                Model
+              </text>
+              <text fg={THEME.colors.text.primary}>{currentModelName}</text>
+            </box>
+            <box style={{ flexDirection: "row" }}>
+              <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+                Input Tokens
+              </text>
+              <text fg={THEME.colors.text.primary}>
+                {tokenUsage.inputTokens}
+              </text>
+            </box>
+            <box style={{ flexDirection: "row" }}>
+              <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+                Output Tokens
+              </text>
+              <text fg={THEME.colors.text.primary}>
+                {tokenUsage.outputTokens}
+              </text>
+            </box>
+            <box style={{ flexDirection: "row" }}>
+              <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
+                Total Cost
+              </text>
+              <text fg={THEME.colors.text.primary}>
+                ${tokenUsage.cost.toFixed(6)}
+              </text>
+            </box>
+          </box>
+          <box
+            border={true}
+            borderStyle="rounded"
+            title={PANEL_TITLES.steps}
+            borderColor={
+              activePanel === "steps" ? THEME.colors.border.active : undefined
+            }
+            style={{
+              flexGrow: 1,
+              height: activePanel === "steps" ? "80%" : "40%",
+            }}
+          >
+            <scrollbox stickyScroll={true} stickyStart="bottom">
+              {messages.map((msg, i) => (
+                <text
+                  key={i}
+                  fg={
+                    msg.role === "user"
+                      ? THEME.colors.text.primary
+                      : THEME.colors.text.muted
+                  }
+                >
+                  {msg.role === "user" ? "user" : "assistant"}
+                </text>
+              ))}
+            </scrollbox>
+          </box>
+          <box
+            border={true}
+            borderStyle="rounded"
+            title={PANEL_TITLES.tasks}
+            borderColor={
+              activePanel === "tasks" ? THEME.colors.border.active : undefined
+            }
+            style={{ flexGrow: 1, padding: 1 }}
           />
-        )}
-        {showAskUserQuestion && askUserQuestionRef.current && (
-          <AskUserQuestionDialog
-            input={askUserQuestionRef.current}
-            onSubmit={handleAskUserQuestionSubmit}
-            onCancel={handleAskUserQuestionCancel}
+          <box
+            border={true}
+            borderStyle="rounded"
+            title={PANEL_TITLES.tools}
+            borderColor={
+              activePanel === "tools" ? THEME.colors.border.active : undefined
+            }
+            style={{ flexGrow: 1, padding: 1 }}
           />
-        )}
-        {showModelSelector && (
-          <ModelSelectorDialog
-            currentModel={currentModel}
-            onSelect={handleModelSelect}
-            onCancel={handleModelCancel}
-          />
-        )}
-        {isLoading && <LoadingIndicator />}
-      </scrollbox>
-      <ChatTextbox
-        onSubmit={handleSubmit}
-        commands={allCommands}
-        minHeight={6}
-      />
-      <StatusBar
-        providerName={currentProviderName}
-        modelName={currentModelName}
-        inputTokens={tokenUsage.inputTokens}
-        outputTokens={tokenUsage.outputTokens}
-        cost={tokenUsage.cost}
-      />
+        </box>
+
+        <box style={{ flexGrow: 1, flexDirection: "column" }}>
+          <box border={true} borderStyle="rounded" title="conversation">
+            <scrollbox
+              style={{ flexGrow: 1, padding: 1 }}
+              stickyScroll={true}
+              stickyStart="bottom"
+            >
+              <MessageList messages={messages} />
+              {showToolUseRequest && toolUseRequestRef.current && (
+                <ToolUseRequestDialog
+                  request={toolUseRequestRef.current}
+                  session={session}
+                  onSelect={handleToolUseSelect}
+                />
+              )}
+              {showAskUserQuestion && askUserQuestionRef.current && (
+                <AskUserQuestionDialog
+                  input={askUserQuestionRef.current}
+                  onSubmit={handleAskUserQuestionSubmit}
+                  onCancel={handleAskUserQuestionCancel}
+                />
+              )}
+              {isLoading && <LoadingIndicator />}
+            </scrollbox>
+          </box>
+          <box
+            border={true}
+            borderStyle="rounded"
+            title={PANEL_TITLES.reply}
+            borderColor={
+              activePanel === "reply" ? THEME.colors.border.active : undefined
+            }
+            height={5}
+            padding={1}
+          >
+            <textarea
+              focused={activePanel === "reply"}
+              ref={textareaRef}
+              onSubmit={handleTextareaSubmit}
+              keyBindings={[
+                { name: "return", action: "submit" as const },
+                { name: "return", meta: true, action: "newline" as const },
+                { name: "return", shift: true, action: "newline" as const },
+              ]}
+            />
+          </box>
+        </box>
+      </box>
+      {activePanel === "status" && renderStatusKeybindings()}
+      {showModelSelector && (
+        <box
+          position="absolute"
+          left={0}
+          top={0}
+          width="100%"
+          height="100%"
+          justifyContent="center"
+          alignItems="center"
+        >
+          <box backgroundColor="#000000" width="60%">
+            <box
+              border={true}
+              borderStyle="rounded"
+              borderColor={THEME.colors.border.active}
+              title="select model"
+              style={{ maxHeight: 10 }}
+            >
+              <Select
+                items={modelItems}
+                active={showModelSelector}
+                selectedIndex={selectedModel}
+                onSelectedChange={setSelectedModel}
+                emptyText="No models"
+                persistSelection
+              />
+            </box>
+          </box>
+        </box>
+      )}
     </box>
   );
 };

@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { useKeyboard } from "@opentui/react";
-import { SyntaxStyle } from "@opentui/core";
+import { SyntaxStyle, TextareaRenderable } from "@opentui/core";
 import { githubDark, THEME } from "../theme";
 import {
   getRecentSessions,
@@ -19,7 +19,6 @@ import MessageList from "./MessageList";
 import Select from "./Select";
 import type { SelectItem } from "./Select";
 
-const ACTIVE_BORDER_COLOR = "#FFA500";
 const LEFT_PANELS = ["status", "sessions", "memory", "extensions"] as const;
 type LeftPanel = (typeof LEFT_PANELS)[number];
 const PANEL_TITLES: Record<LeftPanel, string> = {
@@ -96,7 +95,7 @@ const HomeScreen = (props: Props) => {
   const [showChatPopup, setShowChatPopup] = useState(false);
   const [popupFocus, setPopupFocus] = useState<"prompt" | "model">("prompt");
   const [selectedModel, setSelectedModel] = useState(0);
-  const textareaRef = useRef<import("@opentui/core").TextareaRenderable>(null);
+  const textareaRef = useRef<TextareaRenderable>(null);
 
   const allModels: SelectItem[] = useMemo(() => {
     const items: SelectItem[] = [];
@@ -177,7 +176,7 @@ const HomeScreen = (props: Props) => {
 
   const renderStatus = () => (
     <box
-      style={{ width: "60%", flexDirection: "column", alignItems: "center" }}
+      style={{ width: "65%", flexDirection: "column", alignItems: "center" }}
       border={true}
       borderStyle="rounded"
       title="status"
@@ -198,10 +197,10 @@ const HomeScreen = (props: Props) => {
 
   const renderSessions = () => (
     <box
-      style={{ width: "60%", flexDirection: "column" }}
+      style={{ width: "65%", flexDirection: "column" }}
       border={true}
       borderStyle="rounded"
-      title="sessions"
+      title="session"
     >
       <scrollbox>
         <MessageList messages={sessionMessages} />
@@ -221,7 +220,7 @@ const HomeScreen = (props: Props) => {
 
   const renderMemory = () => (
     <box
-      style={{ width: "60%", flexDirection: "column" }}
+      style={{ width: "65%", flexDirection: "column" }}
       border={true}
       borderStyle="rounded"
       title="memory"
@@ -244,10 +243,10 @@ const HomeScreen = (props: Props) => {
 
   const renderExtensions = () => (
     <box
-      style={{ width: "60%", flexDirection: "column" }}
+      style={{ width: "65%", flexDirection: "column" }}
       border={true}
       borderStyle="rounded"
-      title={selectedExtensionData?.name ?? "extensions"}
+      title={selectedExtensionData?.name ?? "extension"}
     >
       <scrollbox>
         <code
@@ -294,21 +293,20 @@ const HomeScreen = (props: Props) => {
 
   return (
     <box style={{ flexGrow: 1, flexDirection: "column" }} position="relative">
-      {/* Main content area */}
       <box style={{ flexGrow: 1, flexDirection: "row" }}>
-        {/* Left column - 40% */}
-        <box style={{ width: "40%", flexDirection: "column" }}>
+        <box style={{ width: "35%", flexDirection: "column" }}>
           <box
             border={true}
             borderStyle="rounded"
             borderColor={
-              activePanel === "status" ? ACTIVE_BORDER_COLOR : undefined
+              activePanel === "status" ? THEME.colors.border.active : undefined
             }
             title={PANEL_TITLES.status}
             style={{ flexDirection: "column", flexShrink: 0 }}
           >
-            <text>dim v0.01</text>
-            <text fg={THEME.colors.text.muted}>{process.cwd()}</text>
+            <text fg={THEME.colors.text.muted}>
+              {process.cwd().replace(homedir(), "~")}
+            </text>
             {warning && (
               <text fg={THEME.colors.highlight.warning}>{warning}</text>
             )}
@@ -318,7 +316,9 @@ const HomeScreen = (props: Props) => {
             border={true}
             borderStyle="rounded"
             borderColor={
-              activePanel === "sessions" ? ACTIVE_BORDER_COLOR : undefined
+              activePanel === "sessions"
+                ? THEME.colors.border.active
+                : undefined
             }
             title={PANEL_TITLES.sessions}
           >
@@ -335,7 +335,7 @@ const HomeScreen = (props: Props) => {
             border={true}
             borderStyle="rounded"
             borderColor={
-              activePanel === "memory" ? ACTIVE_BORDER_COLOR : undefined
+              activePanel === "memory" ? THEME.colors.border.active : undefined
             }
             title={PANEL_TITLES.memory}
           >
@@ -352,7 +352,9 @@ const HomeScreen = (props: Props) => {
             border={true}
             borderStyle="rounded"
             borderColor={
-              activePanel === "extensions" ? ACTIVE_BORDER_COLOR : undefined
+              activePanel === "extensions"
+                ? THEME.colors.border.active
+                : undefined
             }
             title={PANEL_TITLES.extensions}
           >
@@ -366,14 +368,12 @@ const HomeScreen = (props: Props) => {
           </box>
         </box>
 
-        {/* Right column - 60% */}
         {activePanel === "status" && renderStatus()}
         {activePanel === "sessions" && renderSessions()}
         {activePanel === "memory" && renderMemory()}
         {activePanel === "extensions" && renderExtensions()}
       </box>
 
-      {/* Bottom bar - keybinding hints */}
       {activePanel === "status" && renderStatusKeybindings()}
       {activePanel === "sessions" && renderSessionKeybindings()}
       {activePanel === "memory" && renderMemoryKeybindings()}
@@ -394,7 +394,7 @@ const HomeScreen = (props: Props) => {
               border={true}
               borderStyle="rounded"
               borderColor={
-                popupFocus === "prompt" ? ACTIVE_BORDER_COLOR : undefined
+                popupFocus === "prompt" ? THEME.colors.border.active : undefined
               }
               padding={1}
               marginBottom={1}
@@ -413,7 +413,7 @@ const HomeScreen = (props: Props) => {
               border={true}
               borderStyle="rounded"
               borderColor={
-                popupFocus === "model" ? ACTIVE_BORDER_COLOR : undefined
+                popupFocus === "model" ? THEME.colors.border.active : undefined
               }
               title="model"
               style={{ maxHeight: 5 }}

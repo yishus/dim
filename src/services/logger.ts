@@ -14,7 +14,6 @@ export enum LogLevel {
 
 export interface ConversationLogEntry {
   timestamp: string;
-  sessionId: string;
   type: "message" | "tool_call" | "tool_result" | "summary";
   role?: "user" | "assistant";
   content: any;
@@ -39,48 +38,41 @@ export interface DebugLogEntry {
 }
 
 export class Logger {
-  private sessionId: string;
   private conversationWriter: FileSink;
   private debugWriter: FileSink;
   private debugLevel: LogLevel = LogLevel.INFO;
 
-  constructor(sessionId?: string) {
-    this.sessionId = sessionId || this.generateSessionId();
-    const logDir = join(homedir(), ".dim", "logs");
+  constructor(sessionId: string) {
+    const projectId = process.cwd().replace(/[/\\]/g, "_").replace(/:/g, "_");
+    const logDir = join(homedir(), ".dim", "logs", projectId);
 
     if (!existsSync(logDir)) {
       mkdirSync(logDir, { recursive: true });
     }
 
-    const datestamp = new Date().toISOString().split("T")[0];
-    this.conversationWriter = Bun.file(join(logDir, `conversation-${datestamp}.jsonl`)).writer();
-    this.debugWriter = Bun.file(join(logDir, `debug-${datestamp}.log`)).writer();
-
-    this.logConversation({
-      type: "message",
-      content: { type: "session_start", sessionId: this.sessionId },
-    });
+    this.conversationWriter = Bun.file(
+      join(logDir, `${sessionId}.jsonl`),
+    ).writer();
+    this.debugWriter = Bun.file(
+      join(logDir, `debug-${sessionId}.log`),
+    ).writer();
   }
 
-  private generateSessionId(): string {
-    return `session-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  }
-
-  getSessionId(): string {
-    return this.sessionId;
-  }
-
-  logConversation(entry: Omit<ConversationLogEntry, "timestamp" | "sessionId">) {
+  logConversation(
+    entry: Omit<ConversationLogEntry, "timestamp" | "sessionId">,
+  ) {
     const logEntry: ConversationLogEntry = {
       timestamp: new Date().toISOString(),
-      sessionId: this.sessionId,
       ...entry,
     };
 
     this.conversationWriter.write(JSON.stringify(logEntry) + "\n");
   }
 
-  logMessage(message: MessageParam, metadata?: ConversationLogEntry["metadata"]) {
+  logMessage(
+    message: MessageParam,
+    metadata?: ConversationLogEntry["metadata"],
+  ) {
     this.logConversation({
       type: "message",
       role: message.role,
@@ -150,7 +142,12 @@ export class Logger {
   }
 
   private shouldLog(level: LogLevel): boolean {
-    const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
+    const levels = [
+      LogLevel.DEBUG,
+      LogLevel.INFO,
+      LogLevel.WARN,
+      LogLevel.ERROR,
+    ];
     return levels.indexOf(level) >= levels.indexOf(this.debugLevel);
   }
 
@@ -171,7 +168,6 @@ export class Logger {
 
 // No-op logger that silently discards all log calls
 const noopLogger: Logger = {
-  getSessionId: () => "",
   logConversation: () => {},
   logMessage: () => {},
   logToolCall: () => {},
@@ -187,7 +183,7 @@ const noopLogger: Logger = {
 // Singleton instance for the current session
 let currentLogger: Logger = noopLogger;
 
-export function initializeLogger(sessionId?: string): Logger {
+export function initializeLogger(sessionId: string): Logger {
   currentLogger = new Logger(sessionId);
   return currentLogger;
 }
