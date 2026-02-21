@@ -9,10 +9,7 @@ import {
   getRecentSessions,
   getSessionMessages,
 } from "../services/session-history";
-import {
-  AVAILABLE_ANTHROPIC_MODELS,
-  DEFAULT_ANTHROPIC_MODEL,
-} from "../providers/anthropic";
+import { AVAILABLE_ANTHROPIC_MODELS } from "../providers/anthropic";
 import { AVAILABLE_GOOGLE_MODELS } from "../providers/google";
 import { AVAILABLE_OPENAI_MODELS } from "../providers/openai";
 import MessageList from "./MessageList";
@@ -69,7 +66,6 @@ interface Props {
     modelId: string,
   ) => void | Promise<void>;
   onExit: () => void;
-  warning?: string;
 }
 
 function formatDate(date: Date): string {
@@ -86,7 +82,6 @@ function formatDate(date: Date): string {
 }
 
 const HomeScreen = (props: Props) => {
-  const { warning } = props;
   const sessions = useMemo(() => getRecentSessions(10), []);
   const [activePanel, setActivePanel] = useState<LeftPanel>("status");
   const [selectedSession, setSelectedSession] = useState(0);
@@ -103,7 +98,6 @@ const HomeScreen = (props: Props) => {
       items.push({
         key: m.id,
         label: m.name,
-        detail: m.id === DEFAULT_ANTHROPIC_MODEL ? "(default)" : undefined,
       });
     }
     for (const m of AVAILABLE_GOOGLE_MODELS) {
@@ -260,7 +254,7 @@ const HomeScreen = (props: Props) => {
 
   const renderStatusKeybindings = () => (
     <box style={{ width: "100%", flexShrink: 0 }}>
-      <text> </text>
+      <text>New session: a</text>
     </box>
   );
 
@@ -272,13 +266,13 @@ const HomeScreen = (props: Props) => {
 
   const renderMemoryKeybindings = () => (
     <box style={{ width: "100%", flexShrink: 0 }}>
-      <text> </text>
+      <text>New session: a</text>
     </box>
   );
 
   const renderExtensionsKeybindings = () => (
     <box style={{ width: "100%", flexShrink: 0 }}>
-      <text> </text>
+      <text>New session: a</text>
     </box>
   );
 
@@ -307,9 +301,6 @@ const HomeScreen = (props: Props) => {
             <text fg={THEME.colors.text.muted}>
               {process.cwd().replace(homedir(), "~")}
             </text>
-            {warning && (
-              <text fg={THEME.colors.highlight.warning}>{warning}</text>
-            )}
           </box>
 
           <box

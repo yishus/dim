@@ -10,6 +10,7 @@ export const THEME = {
     text: {
       primary: "#FFFFFF",
       secondary: "#AAAAAA",
+      highlight: "#FFA500",
       muted: "#666666",
     },
     bg: {

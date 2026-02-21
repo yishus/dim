@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 
 import { AI } from "./ai";
-import type { MessageParam, SummarizeResult } from "./types";
+import type { MessageEmitEvent, MessageParam, SummarizeResult } from "./types";
 import { Provider } from "./types";
 import {
   SUMMARIZATION_TOKEN_THRESHOLD,
@@ -71,7 +71,7 @@ export async function maybeSummarize(
   context: MessageParam[],
   contextTokens: number,
   provider: Provider,
-  emitMessage?: (message: string) => void,
+  emitMessage?: (event: MessageEmitEvent) => void,
 ): Promise<SummarizeResult | null> {
   if (contextTokens < SUMMARIZATION_TOKEN_THRESHOLD) {
     return null;
@@ -89,7 +89,10 @@ export async function maybeSummarize(
   const toSummarize = context.slice(0, -recentCount);
   const toKeep = context.slice(-recentCount);
 
-  emitMessage?.("Summarizing conversation context...");
+  emitMessage?.({
+    message: "Summarizing conversation context...",
+    type: "agent_update",
+  });
 
   const summary = await generateSummary(provider, toSummarize);
 
@@ -107,7 +110,7 @@ export async function maybeSummarize(
     ...toKeep,
   ];
 
-  emitMessage?.("Context summarized.");
+  emitMessage?.({ message: "Context summarized.", type: "agent_update" });
 
   return { context: newContext, contextTokens: 0 };
 }

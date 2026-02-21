@@ -63,6 +63,7 @@ const CodingAgent = (props: Props) => {
   isLoadingRef.current = isLoading;
   const [activePanel, setActivePanel] = useState<LeftPanel>("reply");
   const [selectedModel, setSelectedModel] = useState(0);
+  const [selectedStep, setSelectedStep] = useState(0);
   const textareaRef = useRef<TextareaRenderable>(null);
 
   const modelItems: SelectItem[] = useMemo(
@@ -159,6 +160,15 @@ const CodingAgent = (props: Props) => {
     handleSubmit(userPrompt);
   }, []);
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      setSelectedStep((prev) => {
+        const wasAtEnd = prev >= messages.length - 2;
+        return wasAtEnd ? messages.length - 1 : prev;
+      });
+    }
+  }, [messages.length]);
+
   const handleToolUseSelect = (approved: boolean) => {
     pendingApprovalRef.current?.resolve(approved);
     pendingApprovalRef.current = null;
@@ -187,7 +197,7 @@ const CodingAgent = (props: Props) => {
     setMessages((prev) => [
       ...prev,
       {
-        role: "assistant",
+        role: "agent",
         text: `Model changed to ${modelName} (${providerName})`,
       },
     ]);
@@ -215,6 +225,40 @@ const CodingAgent = (props: Props) => {
       <text>m: Switch model</text>
     </box>
   );
+
+  const renderConversation = () => (
+    <scrollbox
+      style={{ flexGrow: 1, padding: 1 }}
+      stickyScroll={true}
+      stickyStart="bottom"
+    >
+      <MessageList messages={messages} />
+      {showToolUseRequest && toolUseRequestRef.current && (
+        <ToolUseRequestDialog
+          request={toolUseRequestRef.current}
+          session={session}
+          onSelect={handleToolUseSelect}
+        />
+      )}
+      {showAskUserQuestion && askUserQuestionRef.current && (
+        <AskUserQuestionDialog
+          input={askUserQuestionRef.current}
+          onSubmit={handleAskUserQuestionSubmit}
+          onCancel={handleAskUserQuestionCancel}
+        />
+      )}
+      {isLoading && <LoadingIndicator />}
+    </scrollbox>
+  );
+
+  const renderMessage = () => {
+    const msg = messages[selectedStep];
+    return (
+      <scrollbox style={{ flexGrow: 1, padding: 1 }}>
+        {msg ? <MessageList messages={[msg]} /> : null}
+      </scrollbox>
+    );
+  };
 
   const currentModelName =
     ALL_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
@@ -288,20 +332,17 @@ const CodingAgent = (props: Props) => {
               height: activePanel === "steps" ? "80%" : "40%",
             }}
           >
-            <scrollbox stickyScroll={true} stickyStart="bottom">
-              {messages.map((msg, i) => (
-                <text
-                  key={i}
-                  fg={
-                    msg.role === "user"
-                      ? THEME.colors.text.primary
-                      : THEME.colors.text.muted
-                  }
-                >
-                  {msg.role === "user" ? "user" : "assistant"}
-                </text>
-              ))}
-            </scrollbox>
+            <Select
+              items={messages.map((msg, i) => ({
+                key: String(i),
+                label: msg.role,
+                detail: msg.text.slice(0, 20),
+              }))}
+              active={activePanel === "steps"}
+              selectedIndex={selectedStep}
+              onSelectedChange={setSelectedStep}
+              emptyText="No steps yet"
+            />
           </box>
           <box
             border={true}
@@ -325,28 +366,7 @@ const CodingAgent = (props: Props) => {
 
         <box style={{ flexGrow: 1, flexDirection: "column" }}>
           <box border={true} borderStyle="rounded" title="conversation">
-            <scrollbox
-              style={{ flexGrow: 1, padding: 1 }}
-              stickyScroll={true}
-              stickyStart="bottom"
-            >
-              <MessageList messages={messages} />
-              {showToolUseRequest && toolUseRequestRef.current && (
-                <ToolUseRequestDialog
-                  request={toolUseRequestRef.current}
-                  session={session}
-                  onSelect={handleToolUseSelect}
-                />
-              )}
-              {showAskUserQuestion && askUserQuestionRef.current && (
-                <AskUserQuestionDialog
-                  input={askUserQuestionRef.current}
-                  onSubmit={handleAskUserQuestionSubmit}
-                  onCancel={handleAskUserQuestionCancel}
-                />
-              )}
-              {isLoading && <LoadingIndicator />}
-            </scrollbox>
+            {activePanel === "steps" ? renderMessage() : renderConversation()}
           </box>
           <box
             border={true}

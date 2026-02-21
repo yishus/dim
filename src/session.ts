@@ -13,6 +13,7 @@ import {
   type ToolUseRequest,
   type AskUserQuestionRequest,
   type QuestionAnswer,
+  type MessageEmitEvent,
   Provider,
 } from "./types";
 import {
@@ -195,9 +196,8 @@ export class Session {
     this.agent.cancel();
   }
 
-  private handleEmitMessage(message: string) {
-    this.eventBus.emit("message_start", { role: "assistant" });
-    this.eventBus.emit("message_update", { text: message });
+  private handleEmitMessage(event: MessageEmitEvent) {
+    this.eventBus.emit(event.type, { text: event.message });
   }
 
   private handleTokenUsage(

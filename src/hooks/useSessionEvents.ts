@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Session } from "../session";
 import type { UIMessage } from "../types";
 import type {
+  AgentMessageEvent,
   MessageStartEvent,
   MessageUpdateEvent,
   TokenUsageUpdateEvent,
@@ -47,6 +48,14 @@ export function useSessionEvents(session: Session) {
       });
     };
 
+    const onAgentUpdate = (event: AgentMessageEvent) => {
+      setMessages((prev) => [...prev, { role: "agent", text: event.text }]);
+    };
+
+    const onToolUse = (event: AgentMessageEvent) => {
+      setMessages((prev) => [...prev, { role: "tool", text: event.text }]);
+    };
+
     const onEnd = () => {
       setIsLoading(false);
     };
@@ -54,12 +63,16 @@ export function useSessionEvents(session: Session) {
     session.eventBus.on("message_start", onStart);
     session.eventBus.on("message_update", onUpdate);
     session.eventBus.on("token_usage_update", onTokenUsage);
+    session.eventBus.on("agent_update", onAgentUpdate);
+    session.eventBus.on("tool_use", onToolUse);
     session.eventBus.on("message_end", onEnd);
 
     return () => {
       session.eventBus.off("message_start", onStart);
       session.eventBus.off("message_update", onUpdate);
       session.eventBus.off("token_usage_update", onTokenUsage);
+      session.eventBus.off("agent_update", onAgentUpdate);
+      session.eventBus.off("tool_use", onToolUse);
       session.eventBus.off("message_end", onEnd);
     };
   }, [session]);

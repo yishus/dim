@@ -14,9 +14,7 @@ export type {
   MessageResponse,
 } from "./messages";
 
-export {
-  Provider,
-} from "./providers";
+export { Provider } from "./providers";
 
 export type {
   StreamOptions,
@@ -28,11 +26,7 @@ export type {
   ModelId,
 } from "./providers";
 
-export type {
-  ToolConfig,
-  ToolDefinition,
-  Tool,
-} from "./tools";
+export type { ToolConfig, ToolDefinition, Tool } from "./tools";
 
 export type {
   ProviderModel,
@@ -43,6 +37,7 @@ export type {
 } from "./session";
 
 export type {
+  AgentMessageEvent,
   MessageStartEvent,
   MessageUpdateEvent,
   TokenUsageUpdateEvent,
@@ -57,6 +52,7 @@ export type {
 } from "./extensions";
 
 export type {
+  MessageEmitEvent,
   PromptOptions,
   ToolRunnerCallbacks,
   SummarizeResult,

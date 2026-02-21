@@ -86,9 +86,10 @@ export async function runToolCalls(
         if (getToolPermission(name) && canUseTool) {
           const canUse = await canUseTool(name, input);
           if (!canUse) {
-            emitMessage?.(
-              `Interrupted: ${name} ${getToolDescription(name, input)}`,
-            );
+            emitMessage?.({
+              message: `Interrupted: ${name} ${getToolDescription(name, input)}`,
+              type: "agent_update",
+            });
             responses.push({
               id,
               name,
@@ -104,8 +105,11 @@ export async function runToolCalls(
             continue;
           }
         }
-        emitMessage?.(`${name} ${getToolDescription(name, input)}`);
-        
+        emitMessage?.({
+          message: `${name} ${getToolDescription(name, input)}`,
+          type: "tool_use",
+        });
+
         getLogger().logToolCall({ type: "tool_use", id, name, input });
 
         // Special handling for askUserQuestion tool
@@ -118,7 +122,7 @@ export async function runToolCalls(
             name,
             content: [{ type: "text" as const, text: result }],
           });
-          
+
           getLogger().logToolResult(id, result);
           continue;
         }
@@ -135,9 +139,9 @@ export async function runToolCalls(
           error = err as Error;
           result = `Error: ${error.message}`;
         }
-        
+
         getLogger().logToolResult(id, error ? undefined : result, error);
-        
+
         responses.push({
           id,
           name,

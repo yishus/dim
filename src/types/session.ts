@@ -8,7 +8,7 @@ export interface ProviderModel {
 }
 
 export interface UIMessage {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "agent" | "tool";
   text: string;
 }
 

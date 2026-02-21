@@ -113,6 +113,7 @@ const parseFilePaths = (text: string, baseColor: string): TextSegment[] => {
 
 const Message = ({ message, index }: Props) => {
   const isUser = message.role === "user";
+  const isAgent = message.role === "agent";
   const baseColor = isUser
     ? THEME.colors.text.primary
     : THEME.colors.text.secondary;
@@ -125,7 +126,11 @@ const Message = ({ message, index }: Props) => {
       key={index}
       border={["left"]}
       borderColor={
-        isUser ? THEME.colors.border.focus : THEME.colors.border.default
+        isUser
+          ? THEME.colors.border.focus
+          : isAgent
+            ? THEME.colors.text.highlight
+            : THEME.colors.border.default
       }
       style={{
         width: "100%",
