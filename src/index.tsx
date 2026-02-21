@@ -22,8 +22,9 @@ const App = ({ onExit }: AppProps) => {
   const handleInitialPromptSubmitted = async (
     prompt: string,
     modelId: string,
+    systemPromptId: string,
   ) => {
-    const newSession = await Session.create();
+    const newSession = await Session.create(systemPromptId);
     const model = ALL_MODELS.find((m) => m.id === modelId);
     if (model) {
       newSession.setModel(model.id as ModelId, model.provider);

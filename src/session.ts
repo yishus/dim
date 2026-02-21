@@ -17,6 +17,10 @@ import {
   Provider,
 } from "./types";
 import {
+  SYSTEM_PROMPTS,
+  DEFAULT_SYSTEM_PROMPT_ID,
+} from "./prompts/index";
+import {
   AVAILABLE_ANTHROPIC_MODELS,
   AVAILABLE_GOOGLE_MODELS,
   AVAILABLE_OPENAI_MODELS,
@@ -53,7 +57,6 @@ export const ALL_MODELS: ProviderModel[] = [
   ...AVAILABLE_OPENAI_MODELS.map((m) => ({ ...m, provider: Provider.OpenAI })),
 ];
 
-const SYSTEM_PROMPT_PATH = join(__dirname, "prompts/system_workflow.md");
 
 function tryExecSync(cmd: string, fallback: string = ""): string {
   try {
@@ -78,7 +81,7 @@ export class Session {
 
   private constructor() {}
 
-  static async create(): Promise<Session> {
+  static async create(systemPromptId?: string): Promise<Session> {
     const session = new Session();
 
     session.logger = initializeLogger(session.id);
@@ -116,7 +119,11 @@ export class Session {
     }
 
     // Read system prompt (required)
-    const readSystemPrompt = readFileSync(SYSTEM_PROMPT_PATH, "utf8");
+    const promptDef =
+      SYSTEM_PROMPTS.find((p) => p.id === systemPromptId) ??
+      SYSTEM_PROMPTS.find((p) => p.id === DEFAULT_SYSTEM_PROMPT_ID)!;
+    const systemPromptPath = join(__dirname, "prompts", promptDef.filename);
+    const readSystemPrompt = readFileSync(systemPromptPath, "utf8");
 
     // Git info (optional — each call independent)
     const isGitRepo =

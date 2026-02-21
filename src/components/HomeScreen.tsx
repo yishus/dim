@@ -12,6 +12,7 @@ import {
 import { AVAILABLE_ANTHROPIC_MODELS } from "../providers/anthropic";
 import { AVAILABLE_GOOGLE_MODELS } from "../providers/google";
 import { AVAILABLE_OPENAI_MODELS } from "../providers/openai";
+import { SYSTEM_PROMPTS, DEFAULT_SYSTEM_PROMPT_ID } from "../prompts/index";
 import MessageList from "./MessageList";
 import Select from "./Select";
 import type { SelectItem } from "./Select";
@@ -64,6 +65,7 @@ interface Props {
   initialPromptSubmitted: (
     prompt: string,
     modelId: string,
+    systemPromptId: string,
   ) => void | Promise<void>;
   onExit: () => void;
 }
@@ -88,9 +90,25 @@ const HomeScreen = (props: Props) => {
   const [selectedMemory, setSelectedMemory] = useState(0);
   const [selectedExtension, setSelectedExtension] = useState(0);
   const [showChatPopup, setShowChatPopup] = useState(false);
-  const [popupFocus, setPopupFocus] = useState<"prompt" | "model">("prompt");
+  const [popupFocus, setPopupFocus] = useState<
+    "prompt" | "systemPrompt" | "model"
+  >("prompt");
   const [selectedModel, setSelectedModel] = useState(0);
+  const [selectedSystemPrompt, setSelectedSystemPrompt] = useState(
+    () =>
+      SYSTEM_PROMPTS.findIndex((p) => p.id === DEFAULT_SYSTEM_PROMPT_ID) ?? 0,
+  );
   const textareaRef = useRef<TextareaRenderable>(null);
+
+  const systemPromptItems: SelectItem[] = useMemo(
+    () =>
+      SYSTEM_PROMPTS.map((p) => ({
+        key: p.id,
+        label: p.name,
+        detail: p.description,
+      })),
+    [],
+  );
 
   const allModels: SelectItem[] = useMemo(() => {
     const items: SelectItem[] = [];
@@ -145,7 +163,11 @@ const HomeScreen = (props: Props) => {
       if (key.name === "escape") {
         setShowChatPopup(false);
       } else if (key.name === "tab") {
-        setPopupFocus((f) => (f === "prompt" ? "model" : "prompt"));
+        setPopupFocus((f) => {
+          if (f === "prompt") return "systemPrompt";
+          if (f === "systemPrompt") return "model";
+          return "prompt";
+        });
       } else if (key.name === "return" && !key.meta && !key.shift) {
         handleChatSubmit();
       }
@@ -280,9 +302,11 @@ const HomeScreen = (props: Props) => {
     const text = textareaRef.current?.plainText?.trim();
     if (!text) return;
     const modelId = allModels[selectedModel]?.key ?? allModels[0]!.key;
+    const systemPromptId =
+      SYSTEM_PROMPTS[selectedSystemPrompt]?.id ?? DEFAULT_SYSTEM_PROMPT_ID;
     textareaRef.current?.clear();
     setShowChatPopup(false);
-    props.initialPromptSubmitted(text, modelId);
+    props.initialPromptSubmitted(text, modelId, systemPromptId);
   };
 
   return (
@@ -388,7 +412,6 @@ const HomeScreen = (props: Props) => {
                 popupFocus === "prompt" ? THEME.colors.border.active : undefined
               }
               padding={1}
-              marginBottom={1}
               title="new session prompt"
             >
               <textarea
@@ -398,6 +421,26 @@ const HomeScreen = (props: Props) => {
                   { name: "return", meta: true, action: "newline" as const },
                   { name: "return", shift: true, action: "newline" as const },
                 ]}
+              />
+            </box>
+            <box
+              border={true}
+              borderStyle="rounded"
+              borderColor={
+                popupFocus === "systemPrompt"
+                  ? THEME.colors.border.active
+                  : undefined
+              }
+              title="system prompt"
+              style={{ maxHeight: 5 }}
+            >
+              <Select
+                items={systemPromptItems}
+                active={popupFocus === "systemPrompt"}
+                selectedIndex={selectedSystemPrompt}
+                onSelectedChange={setSelectedSystemPrompt}
+                emptyText="No prompts"
+                persistSelection
               />
             </box>
             <box
@@ -418,6 +461,7 @@ const HomeScreen = (props: Props) => {
                 persistSelection
               />
             </box>
+            <text>&lt;enter&gt;: submit | &lt;esc&gt;: cancel</text>
           </box>
         </box>
       )}
