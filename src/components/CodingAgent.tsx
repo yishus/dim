@@ -416,7 +416,6 @@ const CodingAgent = (props: Props) => {
                 selectedIndex={selectedModel}
                 onSelectedChange={setSelectedModel}
                 emptyText="No models"
-                persistSelection
               />
             </box>
           </box>

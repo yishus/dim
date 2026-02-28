@@ -16,15 +16,10 @@ import { SYSTEM_PROMPTS, DEFAULT_SYSTEM_PROMPT_ID } from "../prompts/index";
 import MessageList from "./MessageList";
 import Select from "./Select";
 import type { SelectItem } from "./Select";
+import TabbedPanel from "./TabbedPanel";
 
-const LEFT_PANELS = ["status", "sessions", "memory", "extensions"] as const;
+const LEFT_PANELS = ["status", "models", "sessions", "memory"] as const;
 type LeftPanel = (typeof LEFT_PANELS)[number];
-const PANEL_TITLES: Record<LeftPanel, string> = {
-  status: "[1] status",
-  sessions: "[2] sessions",
-  memory: "[3] memory",
-  extensions: "[4] extensions",
-};
 
 const MEMORY_FILES = ["CLAUDE.md", "AGENTS.md"] as const;
 const EXTENSION_DIRS = [
@@ -89,6 +84,7 @@ const HomeScreen = (props: Props) => {
   const [selectedSession, setSelectedSession] = useState(0);
   const [selectedMemory, setSelectedMemory] = useState(0);
   const [selectedExtension, setSelectedExtension] = useState(0);
+  const [memoryTab, setMemoryTab] = useState("memory");
   const [showChatPopup, setShowChatPopup] = useState(false);
   const [popupFocus, setPopupFocus] = useState<
     "prompt" | "systemPrompt" | "model"
@@ -274,6 +270,32 @@ const HomeScreen = (props: Props) => {
     </box>
   );
 
+  const selectedPromptData = SYSTEM_PROMPTS[selectedSystemPrompt];
+  const promptContent = useMemo(() => {
+    if (!selectedPromptData) return "";
+    try {
+      return readFileSync(
+        join(import.meta.dirname, "..", "prompts", selectedPromptData.filename),
+        "utf8",
+      );
+    } catch {
+      return "";
+    }
+  }, [selectedPromptData?.filename]);
+
+  const renderPrompts = () => (
+    <box
+      style={{ width: "65%", flexDirection: "column" }}
+      border={true}
+      borderStyle="rounded"
+      title={selectedPromptData?.name ?? "prompt"}
+    >
+      <scrollbox>
+        <markdown content={promptContent} syntaxStyle={defaultSyntaxStyle} />
+      </scrollbox>
+    </box>
+  );
+
   const renderStatusKeybindings = () => (
     <box style={{ width: "100%", flexShrink: 0 }}>
       <text>New session: a</text>
@@ -287,12 +309,6 @@ const HomeScreen = (props: Props) => {
   );
 
   const renderMemoryKeybindings = () => (
-    <box style={{ width: "100%", flexShrink: 0 }}>
-      <text>New session: a</text>
-    </box>
-  );
-
-  const renderExtensionsKeybindings = () => (
     <box style={{ width: "100%", flexShrink: 0 }}>
       <text>New session: a</text>
     </box>
@@ -313,29 +329,38 @@ const HomeScreen = (props: Props) => {
     <box style={{ flexGrow: 1, flexDirection: "column" }} position="relative">
       <box style={{ flexGrow: 1, flexDirection: "row" }}>
         <box style={{ width: "35%", flexDirection: "column" }}>
-          <box
-            border={true}
-            borderStyle="rounded"
-            borderColor={
-              activePanel === "status" ? THEME.colors.border.active : undefined
-            }
-            title={PANEL_TITLES.status}
+          <TabbedPanel
+            shortcutKey="1"
+            tabs={[{ key: "status", label: "status" }]}
+            active={activePanel === "status"}
+            activeTab="status"
             style={{ flexDirection: "column", flexShrink: 0 }}
           >
             <text fg={THEME.colors.text.muted}>
               {process.cwd().replace(homedir(), "~")}
             </text>
-          </box>
+          </TabbedPanel>
 
-          <box
-            border={true}
-            borderStyle="rounded"
-            borderColor={
-              activePanel === "sessions"
-                ? THEME.colors.border.active
-                : undefined
-            }
-            title={PANEL_TITLES.sessions}
+          <TabbedPanel
+            shortcutKey="2"
+            tabs={[{ key: "models", label: "models" }]}
+            active={activePanel === "models"}
+            activeTab="models"
+          >
+            <Select
+              items={allModels}
+              active={activePanel === "models" && !showChatPopup}
+              selectedIndex={selectedModel}
+              onSelectedChange={setSelectedModel}
+              emptyText="No models available"
+            />
+          </TabbedPanel>
+
+          <TabbedPanel
+            shortcutKey="3"
+            tabs={[{ key: "sessions", label: "sessions" }]}
+            active={activePanel === "sessions"}
+            activeTab="sessions"
           >
             <Select
               items={sessionItems}
@@ -344,55 +369,59 @@ const HomeScreen = (props: Props) => {
               onSelectedChange={setSelectedSession}
               emptyText="No sessions yet"
             />
-          </box>
+          </TabbedPanel>
 
-          <box
-            border={true}
-            borderStyle="rounded"
-            borderColor={
-              activePanel === "memory" ? THEME.colors.border.active : undefined
-            }
-            title={PANEL_TITLES.memory}
+          <TabbedPanel
+            shortcutKey="4"
+            tabs={[
+              { key: "memory", label: "memory" },
+              { key: "extensions", label: "extensions" },
+              { key: "prompts", label: "prompts" },
+            ]}
+            active={activePanel === "memory"}
+            activeTab={memoryTab}
+            onTabChange={setMemoryTab}
           >
-            <Select
-              items={memoryItems}
-              active={activePanel === "memory" && !showChatPopup}
-              selectedIndex={selectedMemory}
-              onSelectedChange={setSelectedMemory}
-              emptyText="No memory files found"
-            />
-          </box>
-
-          <box
-            border={true}
-            borderStyle="rounded"
-            borderColor={
-              activePanel === "extensions"
-                ? THEME.colors.border.active
-                : undefined
-            }
-            title={PANEL_TITLES.extensions}
-          >
-            <Select
-              items={extensionItems}
-              active={activePanel === "extensions" && !showChatPopup}
-              selectedIndex={selectedExtension}
-              onSelectedChange={setSelectedExtension}
-              emptyText="No extensions found"
-            />
-          </box>
+            {memoryTab === "memory" && (
+              <Select
+                items={memoryItems}
+                active={activePanel === "memory" && !showChatPopup}
+                selectedIndex={selectedMemory}
+                onSelectedChange={setSelectedMemory}
+                emptyText="No memory files found"
+              />
+            )}
+            {memoryTab === "extensions" && (
+              <Select
+                items={extensionItems}
+                active={activePanel === "memory" && !showChatPopup}
+                selectedIndex={selectedExtension}
+                onSelectedChange={setSelectedExtension}
+                emptyText="No extensions found"
+              />
+            )}
+            {memoryTab === "prompts" && (
+              <Select
+                items={systemPromptItems}
+                active={activePanel === "memory" && !showChatPopup}
+                selectedIndex={selectedSystemPrompt}
+                onSelectedChange={setSelectedSystemPrompt}
+                emptyText="No system prompts"
+              />
+            )}
+          </TabbedPanel>
         </box>
 
         {activePanel === "status" && renderStatus()}
         {activePanel === "sessions" && renderSessions()}
-        {activePanel === "memory" && renderMemory()}
-        {activePanel === "extensions" && renderExtensions()}
+        {activePanel === "memory" && memoryTab === "memory" && renderMemory()}
+        {activePanel === "memory" && memoryTab === "extensions" && renderExtensions()}
+        {activePanel === "memory" && memoryTab === "prompts" && renderPrompts()}
       </box>
 
       {activePanel === "status" && renderStatusKeybindings()}
       {activePanel === "sessions" && renderSessionKeybindings()}
       {activePanel === "memory" && renderMemoryKeybindings()}
-      {activePanel === "extensions" && renderExtensionsKeybindings()}
 
       {showChatPopup && (
         <box
@@ -421,44 +450,6 @@ const HomeScreen = (props: Props) => {
                   { name: "return", meta: true, action: "newline" as const },
                   { name: "return", shift: true, action: "newline" as const },
                 ]}
-              />
-            </box>
-            <box
-              border={true}
-              borderStyle="rounded"
-              borderColor={
-                popupFocus === "systemPrompt"
-                  ? THEME.colors.border.active
-                  : undefined
-              }
-              title="system prompt"
-              style={{ maxHeight: 5 }}
-            >
-              <Select
-                items={systemPromptItems}
-                active={popupFocus === "systemPrompt"}
-                selectedIndex={selectedSystemPrompt}
-                onSelectedChange={setSelectedSystemPrompt}
-                emptyText="No prompts"
-                persistSelection
-              />
-            </box>
-            <box
-              border={true}
-              borderStyle="rounded"
-              borderColor={
-                popupFocus === "model" ? THEME.colors.border.active : undefined
-              }
-              title="model"
-              style={{ maxHeight: 5 }}
-            >
-              <Select
-                items={allModels}
-                active={popupFocus === "model"}
-                selectedIndex={selectedModel}
-                onSelectedChange={setSelectedModel}
-                emptyText="No models"
-                persistSelection
               />
             </box>
             <text>&lt;enter&gt;: submit | &lt;esc&gt;: cancel</text>

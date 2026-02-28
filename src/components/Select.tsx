@@ -14,7 +14,9 @@ interface Props {
   selectedIndex: number;
   onSelectedChange: (index: number) => void;
   emptyText?: string;
-  persistSelection?: boolean;
+  multiSelect?: boolean;
+  selectedKeys?: string[];
+  onSelectionChange?: (keys: string[]) => void;
 }
 
 const Select = ({
@@ -23,9 +25,13 @@ const Select = ({
   selectedIndex,
   onSelectedChange,
   emptyText = "No items",
-  persistSelection = false,
+  multiSelect = false,
+  selectedKeys = [],
+  onSelectionChange,
 }: Props) => {
   const scrollRef = useRef<any>(null);
+  const showSelection = !!onSelectionChange;
+  const selectedSet = new Set(selectedKeys);
 
   useKeyboard((key) => {
     if (!active || items.length === 0) return;
@@ -33,6 +39,25 @@ const Select = ({
       onSelectedChange(Math.max(0, selectedIndex - 1));
     } else if (key.name === "down") {
       onSelectedChange(Math.min(items.length - 1, selectedIndex + 1));
+    } else if (
+      showSelection &&
+      (key.name === "space" || key.name === "return")
+    ) {
+      const item = items[selectedIndex];
+      if (!item) return;
+      if (multiSelect) {
+        const next = new Set(selectedSet);
+        if (next.has(item.key)) {
+          next.delete(item.key);
+        } else {
+          next.add(item.key);
+        }
+        onSelectionChange([...next]);
+      } else {
+        onSelectionChange(
+          selectedSet.has(item.key) ? [] : [item.key],
+        );
+      }
     }
   });
 
@@ -52,24 +77,37 @@ const Select = ({
   return (
     <scrollbox ref={scrollRef}>
       {items.map((item, i) => {
-        const isSelected = (active || persistSelection) && i === selectedIndex;
+        const isHighlighted =
+          active && i === selectedIndex;
+        const isChecked = selectedSet.has(item.key);
+        const checkbox = isChecked ? "[x] " : "[ ] ";
         return (
           <box
             key={item.key}
             style={{ flexDirection: "row" }}
             backgroundColor={
-              isSelected ? THEME.colors.bg.secondary : undefined
+              isHighlighted ? THEME.colors.bg.secondary : undefined
             }
           >
+            {showSelection && (
+              <text
+                fg={
+                  isChecked
+                    ? THEME.colors.text.primary
+                    : THEME.colors.text.muted
+                }
+              >
+                {checkbox}
+              </text>
+            )}
             <text
               style={{ flexGrow: 1 }}
               fg={
-                isSelected
+                isHighlighted
                   ? THEME.colors.text.primary
                   : THEME.colors.text.secondary
               }
             >
-              {isSelected ? "> " : "  "}
               {item.label}
             </text>
             {item.detail && (

@@ -7,6 +7,7 @@ import { ALL_MODELS, Session } from "./session";
 import type { ModelId } from "./session";
 import HomeScreen from "./components/HomeScreen";
 import CodingAgent from "./components/CodingAgent";
+import "./components/StyledBox";
 
 interface AppProps {
   onExit: () => void;
