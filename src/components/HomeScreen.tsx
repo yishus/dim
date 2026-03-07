@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
@@ -17,8 +17,9 @@ import MessageList from "./MessageList";
 import Select from "./Select";
 import type { SelectItem } from "./Select";
 import TabbedPanel from "./TabbedPanel";
+import { TokenCostHelper } from "../token-cost";
 
-const LEFT_PANELS = ["status", "models", "sessions", "memory"] as const;
+const LEFT_PANELS = ["status", "models", "memory", "sessions"] as const;
 type LeftPanel = (typeof LEFT_PANELS)[number];
 
 const MEMORY_FILES = ["CLAUDE.md", "AGENTS.md"] as const;
@@ -90,6 +91,7 @@ const HomeScreen = (props: Props) => {
     "prompt" | "systemPrompt" | "model"
   >("prompt");
   const [selectedModel, setSelectedModel] = useState(0);
+  const [selectedModelKey, setSelectedModelKey] = useState<string | null>(null);
   const [selectedSystemPrompt, setSelectedSystemPrompt] = useState(
     () =>
       SYSTEM_PROMPTS.findIndex((p) => p.id === DEFAULT_SYSTEM_PROMPT_ID) ?? 0,
@@ -122,6 +124,29 @@ const HomeScreen = (props: Props) => {
     }
     return items;
   }, []);
+
+  useEffect(() => {
+    if (allModels.length === 0) {
+      if (selectedModelKey !== null) setSelectedModelKey(null);
+      return;
+    }
+    if (!selectedModelKey) {
+      setSelectedModelKey(allModels[0]!.key);
+      return;
+    }
+    if (!allModels.some((model) => model.key === selectedModelKey)) {
+      setSelectedModelKey(allModels[0]!.key);
+    }
+  }, [allModels, selectedModelKey]);
+
+  const handleModelSelectionChange = (keys: string[]) => {
+    const nextKey = keys[0] ?? null;
+    setSelectedModelKey(nextKey);
+    if (nextKey) {
+      const idx = allModels.findIndex((model) => model.key === nextKey);
+      if (idx >= 0) setSelectedModel(idx);
+    }
+  };
 
   const memoryFiles = useMemo(() => {
     const cwd = process.cwd();
@@ -296,6 +321,44 @@ const HomeScreen = (props: Props) => {
     </box>
   );
 
+  const selectedModelData = allModels[selectedModel];
+  const modelPricing = useMemo(() => {
+    if (!selectedModelData) return undefined;
+    return TokenCostHelper.getModelPricing(selectedModelData.key);
+  }, [selectedModelData?.key]);
+
+  const renderModels = () => (
+    <box
+      style={{ width: "65%", flexDirection: "column" }}
+      border={true}
+      borderStyle="rounded"
+      title={selectedModelData?.label ?? "model"}
+    >
+      {selectedModelData && (
+        <box style={{ flexDirection: "column", padding: 1 }}>
+          <text>{selectedModelData.label}</text>
+          <text fg={THEME.colors.text.muted}>{selectedModelData.key}</text>
+          <text>{""}</text>
+          {modelPricing ? (
+            <>
+              <text>Pricing</text>
+              <text>
+                {"  "}Input: ${modelPricing.inputPerMillion.toFixed(2)} / 1M
+                tokens
+              </text>
+              <text>
+                {"  "}Output: ${modelPricing.outputPerMillion.toFixed(2)} / 1M
+                tokens
+              </text>
+            </>
+          ) : (
+            <text fg={THEME.colors.text.muted}>No pricing data available</text>
+          )}
+        </box>
+      )}
+    </box>
+  );
+
   const renderStatusKeybindings = () => (
     <box style={{ width: "100%", flexShrink: 0 }}>
       <text>New session: a</text>
@@ -314,10 +377,17 @@ const HomeScreen = (props: Props) => {
     </box>
   );
 
+  const renderModelsKeybindings = () => (
+    <box style={{ width: "100%", flexShrink: 0 }}>
+      <text>Select: &lt;space&gt;</text>
+    </box>
+  );
+
   const handleChatSubmit = () => {
     const text = textareaRef.current?.plainText?.trim();
     if (!text) return;
-    const modelId = allModels[selectedModel]?.key ?? allModels[0]!.key;
+    const modelId =
+      selectedModelKey ?? allModels[selectedModel]?.key ?? allModels[0]!.key;
     const systemPromptId =
       SYSTEM_PROMPTS[selectedSystemPrompt]?.id ?? DEFAULT_SYSTEM_PROMPT_ID;
     textareaRef.current?.clear();
@@ -352,27 +422,14 @@ const HomeScreen = (props: Props) => {
               active={activePanel === "models" && !showChatPopup}
               selectedIndex={selectedModel}
               onSelectedChange={setSelectedModel}
+              selectedKeys={selectedModelKey ? [selectedModelKey] : []}
+              onSelectionChange={handleModelSelectionChange}
               emptyText="No models available"
             />
           </TabbedPanel>
 
           <TabbedPanel
             shortcutKey="3"
-            tabs={[{ key: "sessions", label: "sessions" }]}
-            active={activePanel === "sessions"}
-            activeTab="sessions"
-          >
-            <Select
-              items={sessionItems}
-              active={activePanel === "sessions" && !showChatPopup}
-              selectedIndex={selectedSession}
-              onSelectedChange={setSelectedSession}
-              emptyText="No sessions yet"
-            />
-          </TabbedPanel>
-
-          <TabbedPanel
-            shortcutKey="4"
             tabs={[
               { key: "memory", label: "memory" },
               { key: "extensions", label: "extensions" },
@@ -410,9 +467,25 @@ const HomeScreen = (props: Props) => {
               />
             )}
           </TabbedPanel>
+
+          <TabbedPanel
+            shortcutKey="4"
+            tabs={[{ key: "sessions", label: "sessions" }]}
+            active={activePanel === "sessions"}
+            activeTab="sessions"
+          >
+            <Select
+              items={sessionItems}
+              active={activePanel === "sessions" && !showChatPopup}
+              selectedIndex={selectedSession}
+              onSelectedChange={setSelectedSession}
+              emptyText="No sessions yet"
+            />
+          </TabbedPanel>
         </box>
 
         {activePanel === "status" && renderStatus()}
+        {activePanel === "models" && renderModels()}
         {activePanel === "sessions" && renderSessions()}
         {activePanel === "memory" && memoryTab === "memory" && renderMemory()}
         {activePanel === "memory" && memoryTab === "extensions" && renderExtensions()}
@@ -421,6 +494,7 @@ const HomeScreen = (props: Props) => {
 
       {activePanel === "status" && renderStatusKeybindings()}
       {activePanel === "sessions" && renderSessionKeybindings()}
+      {activePanel === "models" && renderModelsKeybindings()}
       {activePanel === "memory" && renderMemoryKeybindings()}
 
       {showChatPopup && (
