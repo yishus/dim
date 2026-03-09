@@ -20,13 +20,14 @@ import { createStreamResult, type StreamAdapter } from "../streaming";
 
 export type { OpenAIModelId } from "../types";
 
-export const DEFAULT_OPENAI_MODEL: OpenAIModelId = "gpt-5.1-codex-mini";
+export const DEFAULT_OPENAI_MODEL: OpenAIModelId = "gpt-5.4-2026-03-05";
 
-export const SMALL_OPENAI_MODEL: OpenAIModelId = "gpt-4o-mini";
+export const SMALL_OPENAI_MODEL: OpenAIModelId = "gpt-5-mini-2025-08-07";
 
 export const AVAILABLE_OPENAI_MODELS: { id: OpenAIModelId; name: string }[] = [
-  { id: "gpt-5.2-codex", name: "GPT-5.2 Codex" },
-  { id: "gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini" },
+  { id: "gpt-5.4-2026-03-05", name: "GPT-5.4" },
+  { id: "gpt-5.3-codex", name: "GPT-5.3-Codex" },
+  { id: "gpt-5-mini-2025-08-07", name: "GPT-5 mini" },
 ];
 
 export const OpenAIProvider: ProviderInterface = {

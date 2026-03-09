@@ -4,45 +4,41 @@ interface ModelPricing {
 }
 
 const MODEL_PRICING: Record<string, ModelPricing> = {
-  "claude-sonnet-4-5-20250929": {
+  "claude-sonnet-4-6": {
     inputPerMillion: 3.0,
     outputPerMillion: 15.0,
   },
-  "claude-opus-4-20250514": {
-    inputPerMillion: 15.0,
-    outputPerMillion: 75.0,
+  "claude-opus-4-6": {
+    inputPerMillion: 5.0,
+    outputPerMillion: 25.0,
   },
   "claude-haiku-4-5-20251001": {
-    inputPerMillion: 0.8,
-    outputPerMillion: 4.0,
+    inputPerMillion: 1.0,
+    outputPerMillion: 5.0,
   },
   "gemini-3-flash-preview": {
     inputPerMillion: 0.5,
-    outputPerMillion: 3,
+    outputPerMillion: 3.0,
   },
-  "gemini-3-pro-preview": {
-    inputPerMillion: 2,
-    outputPerMillion: 12,
+  "gemini-3.1-pro-preview": {
+    inputPerMillion: 2.0,
+    outputPerMillion: 12.0,
   },
-  "gemini-2.5-pro": {
-    inputPerMillion: 1.25,
-    outputPerMillion: 10,
-  },
-  "gemini-2.0-flash": {
-    inputPerMillion: 0.1,
-    outputPerMillion: 0.4,
-  },
-  "gpt-5.2-codex": {
-    inputPerMillion: 1.75,
-    outputPerMillion: 14,
-  },
-  "gpt-5.1-codex-mini": {
+  "gemini-3.1-flash-lite-preview": {
     inputPerMillion: 0.25,
-    outputPerMillion: 2,
+    outputPerMillion: 1.5,
   },
-  "gpt-4o-mini": {
-    inputPerMillion: 0.15,
-    outputPerMillion: 0.6,
+  "gpt-5.4-2026-03-05": {
+    inputPerMillion: 2.5,
+    outputPerMillion: 15.0,
+  },
+  "gpt-5.3-codex": {
+    inputPerMillion: 1.75,
+    outputPerMillion: 14.0,
+  },
+  "gpt-5-mini-2025-08-07": {
+    inputPerMillion: 0.25,
+    outputPerMillion: 2.0,
   },
 };
 

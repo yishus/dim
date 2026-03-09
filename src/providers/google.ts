@@ -21,14 +21,17 @@ import { createStreamResult, type StreamAdapter } from "../streaming";
 
 export type { GoogleModelId } from "../types";
 
-export const DEFAULT_GOOGLE_MODEL: GoogleModelId = "gemini-3-flash-preview";
+export const DEFAULT_GOOGLE_MODEL: GoogleModelId = "gemini-3.1-pro-preview";
 
-export const SMALL_GOOGLE_MODEL: GoogleModelId = "gemini-2.0-flash";
+export const SMALL_GOOGLE_MODEL: GoogleModelId = "gemini-3-flash-preview";
 
 export const AVAILABLE_GOOGLE_MODELS: { id: GoogleModelId; name: string }[] = [
   { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
-  { id: "gemini-3-pro-preview", name: "Gemini 3 Pro Preview" },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3 Flash Preview" },
+  {
+    id: "gemini-3.1-flash-lite-preview",
+    name: "Gemini 3.1 Flash-Lite Preview",
+  },
 ];
 
 export const GoogleProvider: ProviderInterface = {
@@ -101,9 +104,7 @@ const createGoogleAdapter = (): StreamAdapter => {
       let isFirst = true;
 
       for await (const chunk of providerStream as AsyncIterable<GenerateContentResponse>) {
-        accumulatedParts.push(
-          ...(chunk.candidates?.[0]?.content?.parts || []),
-        );
+        accumulatedParts.push(...(chunk.candidates?.[0]?.content?.parts || []));
         usageMetadata = chunk.usageMetadata || {};
 
         if (chunk.text) {

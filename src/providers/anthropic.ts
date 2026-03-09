@@ -20,8 +20,7 @@ import { createStreamResult, type StreamAdapter } from "../streaming";
 
 export type { AnthropicModelId } from "../types";
 
-export const DEFAULT_ANTHROPIC_MODEL: AnthropicModelId =
-  "claude-sonnet-4-5-20250929";
+export const DEFAULT_ANTHROPIC_MODEL: AnthropicModelId = "claude-opus-4-6";
 
 export const SMALL_ANTHROPIC_MODEL: AnthropicModelId =
   "claude-haiku-4-5-20251001";
@@ -30,8 +29,9 @@ export const AVAILABLE_ANTHROPIC_MODELS: {
   id: AnthropicModelId;
   name: string;
 }[] = [
-  { id: "claude-sonnet-4-5-20250929", name: "Sonnet" },
-  { id: "claude-opus-4-20250514", name: "Opus" },
+  { id: "claude-sonnet-4-6", name: "Sonnet" },
+  { id: "claude-opus-4-6", name: "Opus" },
+  { id: "claude-haiku-4-5-20251001", name: "Haiku" },
 ];
 
 export const AnthropicProvider: ProviderInterface = {
