@@ -16,10 +16,7 @@ import {
   type MessageEmitEvent,
   Provider,
 } from "./types";
-import {
-  SYSTEM_PROMPTS,
-  DEFAULT_SYSTEM_PROMPT_ID,
-} from "./prompts/index";
+import { SYSTEM_PROMPT_FILENAME } from "./prompts/index";
 import {
   AVAILABLE_ANTHROPIC_MODELS,
   AVAILABLE_GOOGLE_MODELS,
@@ -57,7 +54,6 @@ export const ALL_MODELS: ProviderModel[] = [
   ...AVAILABLE_OPENAI_MODELS.map((m) => ({ ...m, provider: Provider.OpenAI })),
 ];
 
-
 function tryExecSync(cmd: string, fallback: string = ""): string {
   try {
     return execSync(cmd).toString().trim();
@@ -81,7 +77,7 @@ export class Session {
 
   private constructor() {}
 
-  static async create(systemPromptId?: string): Promise<Session> {
+  static async create(): Promise<Session> {
     const session = new Session();
 
     session.logger = initializeLogger(session.id);
@@ -118,11 +114,7 @@ export class Session {
       // No CLAUDE.md — that's fine
     }
 
-    // Read system prompt (required)
-    const promptDef =
-      SYSTEM_PROMPTS.find((p) => p.id === systemPromptId) ??
-      SYSTEM_PROMPTS.find((p) => p.id === DEFAULT_SYSTEM_PROMPT_ID)!;
-    const systemPromptPath = join(__dirname, "prompts", promptDef.filename);
+    const systemPromptPath = join(__dirname, "prompts", SYSTEM_PROMPT_FILENAME);
     const readSystemPrompt = readFileSync(systemPromptPath, "utf8");
 
     // Git info (optional — each call independent)
