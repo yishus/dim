@@ -2,18 +2,24 @@
   "name": "@yishus/dim-code",
   "version": "0.1.0",
   "description": "A terminal UI AI coding assistant",
-  "module": "src/index.tsx",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "type": "module",
   "bin": {
-    "dim": "src/index.tsx"
+    "dim": "src/cli.tsx"
   },
   "scripts": {
-    "dev": "bun run --watch src/index.tsx",
-    "start": "bun run src/index.tsx",
+    "build": "rm -rf dist && bun build src/index.ts --outfile dist/index.js && bunx tsc --project tsconfig.build.json",
+    "dev": "bun run --watch src/cli.tsx",
+    "start": "bun run src/cli.tsx",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "logs:build": "cd web && bun install && bunx @tailwindcss/cli -i src/styles.css -o dist/styles.css && bun build src/index.tsx --outdir dist",
+    "logs:build": "cd web && bun install && bunx @tailwindcss/cli -i src/styles.css -o dist/styles.css && bun build src/cli.tsx --outdir dist",
     "logs": "bun run web/server.ts"
   },
   "keywords": [

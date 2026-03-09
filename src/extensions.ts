@@ -7,9 +7,14 @@ import type {
   ExtensionTool,
   ExtensionCommand,
   ActivateFunction,
-} from "./types";
+} from "./types/extensions";
 
-export type { ExtensionToolCallContext, ExtensionTool, ExtensionCommand, ActivateFunction };
+export type {
+  ExtensionToolCallContext,
+  ExtensionTool,
+  ExtensionCommand,
+  ActivateFunction,
+};
 
 export class ExtensionAPI {
   private registry: ExtensionRegistry;

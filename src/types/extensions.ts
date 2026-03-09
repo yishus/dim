@@ -2,6 +2,7 @@ import type { Static, TSchema } from "typebox";
 
 import type { SessionManager } from "../session-manager";
 import type { Provider, ModelId } from "./providers";
+import type { ExtensionAPI } from "../extensions";
 
 export interface ExtensionToolCallContext {
   sessionManager: SessionManager;
@@ -24,4 +25,4 @@ export interface ExtensionCommand {
   execute: () => void | Promise<void>;
 }
 
-export type ActivateFunction = (api: import("../extensions").ExtensionAPI) => void | Promise<void>;
+export type ActivateFunction = (api: ExtensionAPI) => void | Promise<void>;
