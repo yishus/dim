@@ -16,6 +16,7 @@ import MessageList from "./MessageList";
 import ToolUseRequestDialog from "./ToolUseRequestDialog";
 import AskUserQuestionDialog from "./AskUserQuestionDialog";
 import Select from "./Select";
+import TabbedPanel from "./TabbedPanel";
 import type { SelectItem } from "./Select";
 import type { AskUserQuestionInput } from "../tools";
 import LoadingIndicator from "./LoadingIndicator";
@@ -24,22 +25,20 @@ import { THEME } from "../theme";
 
 interface Props {
   session: Session;
-  userPrompt: string;
   onExit: () => void;
 }
 
-const LEFT_PANELS = ["status", "steps", "tasks", "tools", "reply"] as const;
+const LEFT_PANELS = ["status", "steps", "skills", "reply"] as const;
 type LeftPanel = (typeof LEFT_PANELS)[number];
 const PANEL_TITLES: Record<LeftPanel, string> = {
   status: "[1] status",
   steps: "[2] steps",
-  tasks: "[3] tasks",
-  tools: "[4] tools",
-  reply: "[5] reply",
+  skills: "[3] skills",
+  reply: "[4] reply",
 };
 
 const CodingAgent = (props: Props) => {
-  const { session, userPrompt, onExit } = props;
+  const { session, onExit } = props;
 
   const { messages, setMessages, tokenUsage, isLoading, setIsLoading } =
     useSessionEvents(session);
@@ -65,6 +64,8 @@ const CodingAgent = (props: Props) => {
   const [selectedModel, setSelectedModel] = useState(0);
   const [selectedStep, setSelectedStep] = useState(0);
   const textareaRef = useRef<TextareaRenderable>(null);
+  const [stepsTab, setStepsTab] = useState("steps");
+  const [skillsTab, setSkillsTab] = useState("skills");
 
   const modelItems: SelectItem[] = useMemo(
     () =>
@@ -157,10 +158,6 @@ const CodingAgent = (props: Props) => {
   }, []);
 
   useEffect(() => {
-    handleSubmit(userPrompt);
-  }, []);
-
-  useEffect(() => {
     if (messages.length > 0) {
       setSelectedStep((prev) => {
         const wasAtEnd = prev >= messages.length - 2;
@@ -221,34 +218,55 @@ const CodingAgent = (props: Props) => {
   };
 
   const renderStatusKeybindings = () => (
-    <box style={{ width: "100%", flexShrink: 0 }}>
+    <box
+      style={{
+        width: "100%",
+        flexShrink: 0,
+        flexDirection: "row",
+      }}
+    >
       <text>m: Switch model</text>
     </box>
   );
 
   const renderConversation = () => (
-    <scrollbox
-      style={{ flexGrow: 1, padding: 1 }}
-      stickyScroll={true}
-      stickyStart="bottom"
-    >
-      <MessageList messages={messages} />
-      {showToolUseRequest && toolUseRequestRef.current && (
-        <ToolUseRequestDialog
-          request={toolUseRequestRef.current}
-          session={session}
-          onSelect={handleToolUseSelect}
-        />
+    <box style={{ flexGrow: 1, flexDirection: "column", minHeight: 0 }}>
+      {messages.length === 0 ? (
+        <box
+          style={{
+            flexGrow: 1,
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <ascii-font font="tiny" text="dim" />
+        </box>
+      ) : (
+        <scrollbox
+          style={{ flexGrow: 1, padding: 1 }}
+          stickyScroll={true}
+          stickyStart="bottom"
+        >
+          <MessageList messages={messages} />
+          {showToolUseRequest && toolUseRequestRef.current && (
+            <ToolUseRequestDialog
+              request={toolUseRequestRef.current}
+              session={session}
+              onSelect={handleToolUseSelect}
+            />
+          )}
+          {showAskUserQuestion && askUserQuestionRef.current && (
+            <AskUserQuestionDialog
+              input={askUserQuestionRef.current}
+              onSubmit={handleAskUserQuestionSubmit}
+              onCancel={handleAskUserQuestionCancel}
+            />
+          )}
+          {isLoading && <LoadingIndicator />}
+        </scrollbox>
       )}
-      {showAskUserQuestion && askUserQuestionRef.current && (
-        <AskUserQuestionDialog
-          input={askUserQuestionRef.current}
-          onSubmit={handleAskUserQuestionSubmit}
-          onCancel={handleAskUserQuestionCancel}
-        />
-      )}
-      {isLoading && <LoadingIndicator />}
-    </scrollbox>
+    </box>
   );
 
   const renderMessage = () => {
@@ -267,7 +285,7 @@ const CodingAgent = (props: Props) => {
   return (
     <box style={{ flexDirection: "column" }} position="relative">
       <box style={{ flexDirection: "row", flexGrow: 1 }}>
-        <box style={{ width: "40%", flexDirection: "column" }}>
+        <box style={{ width: "30%", flexDirection: "column" }}>
           <box
             border={true}
             borderStyle="rounded"
@@ -275,7 +293,7 @@ const CodingAgent = (props: Props) => {
             borderColor={
               activePanel === "status" ? THEME.colors.border.active : undefined
             }
-            style={{ flexGrow: 1 }}
+            style={{ flexGrow: 0, flexShrink: 0 }}
           >
             <box style={{ flexDirection: "row" }}>
               <text fg={THEME.colors.text.muted} style={{ marginRight: 1 }}>
@@ -320,52 +338,53 @@ const CodingAgent = (props: Props) => {
               </text>
             </box>
           </box>
-          <box
-            border={true}
-            borderStyle="rounded"
-            title={PANEL_TITLES.steps}
-            borderColor={
-              activePanel === "steps" ? THEME.colors.border.active : undefined
-            }
-            style={{
-              flexGrow: 1,
-              height: activePanel === "steps" ? "80%" : "40%",
-            }}
+          <TabbedPanel
+            shortcutKey="2"
+            tabs={[
+              { key: "steps", label: "steps" },
+              { key: "tasks", label: "tasks" },
+            ]}
+            active={activePanel === "steps"}
+            activeTab={stepsTab}
+            onTabChange={setStepsTab}
           >
-            <Select
-              items={messages.map((msg, i) => ({
-                key: String(i),
-                label: msg.role,
-                detail: msg.text.slice(0, 20),
-              }))}
-              active={activePanel === "steps"}
-              selectedIndex={selectedStep}
-              onSelectedChange={setSelectedStep}
-              emptyText="No steps yet"
-            />
-          </box>
-          <box
-            border={true}
-            borderStyle="rounded"
-            title={PANEL_TITLES.tasks}
-            borderColor={
-              activePanel === "tasks" ? THEME.colors.border.active : undefined
-            }
-            style={{ flexGrow: 1, padding: 1 }}
-          />
-          <box
-            border={true}
-            borderStyle="rounded"
-            title={PANEL_TITLES.tools}
-            borderColor={
-              activePanel === "tools" ? THEME.colors.border.active : undefined
-            }
-            style={{ flexGrow: 1, padding: 1 }}
-          />
+            {stepsTab == "steps" && (
+              <Select
+                items={messages.map((msg, i) => ({
+                  key: String(i),
+                  label: msg.role,
+                  detail: msg.text.slice(0, 20),
+                }))}
+                active={activePanel === "steps"}
+                selectedIndex={selectedStep}
+                onSelectedChange={setSelectedStep}
+                emptyText="No steps yet"
+              />
+            )}
+            {stepsTab == "tasks" && <></>}
+          </TabbedPanel>
+          <TabbedPanel
+            shortcutKey="3"
+            tabs={[
+              { key: "skills", label: "skills" },
+              { key: "extensions", label: "extensions" },
+            ]}
+            active={activePanel === "skills"}
+            activeTab={skillsTab}
+            onTabChange={setSkillsTab}
+            style={{ minHeight: 10 }}
+          >
+            {stepsTab == "skills" && <></>}
+            {stepsTab == "extensions" && <></>}
+          </TabbedPanel>
         </box>
-
         <box style={{ flexGrow: 1, flexDirection: "column" }}>
-          <box border={true} borderStyle="rounded" title="conversation">
+          <box
+            border={true}
+            borderStyle="rounded"
+            title="conversation"
+            style={{ flexGrow: 1, flexDirection: "column", minHeight: 0 }}
+          >
             {activePanel === "steps" ? renderMessage() : renderConversation()}
           </box>
           <box

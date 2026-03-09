@@ -1,11 +1,9 @@
 #!/usr/bin/env bun
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 
-import { ALL_MODELS, Session } from "./session";
-import type { ModelId } from "./session";
-import HomeScreen from "./components/HomeScreen";
+import { Session } from "./session";
 import CodingAgent from "./components/CodingAgent";
 import "./components/StyledBox";
 
@@ -14,44 +12,26 @@ interface AppProps {
 }
 
 const App = ({ onExit }: AppProps) => {
-  const [sessionState, setSessionState] = useState<"startup" | "started">(
-    "startup",
-  );
-  const [initialPrompt, setInitialPrompt] = useState<string>("");
   const [session, setSession] = useState<Session | null>(null);
 
-  const handleInitialPromptSubmitted = async (
-    prompt: string,
-    modelId: string,
-    systemPromptId: string,
-  ) => {
-    const newSession = await Session.create(systemPromptId);
-    const model = ALL_MODELS.find((m) => m.id === modelId);
-    if (model) {
-      newSession.setModel(model.id as ModelId, model.provider);
-    }
-    setSession(newSession);
-    setInitialPrompt(prompt);
-    setSessionState("started");
-  };
+  useEffect(() => {
+    const createSession = async () => {
+      try {
+        const newSession = await Session.create();
+        setSession(newSession);
+      } catch (error) {
+        console.error("Error initializing session:", error);
+      }
+    };
 
-  return (
-    <>
-      {sessionState == "startup" && (
-        <HomeScreen
-          initialPromptSubmitted={handleInitialPromptSubmitted}
-          onExit={onExit}
-        />
-      )}
-      {sessionState == "started" && session && (
-        <CodingAgent
-          session={session}
-          userPrompt={initialPrompt}
-          onExit={onExit}
-        />
-      )}
-    </>
-  );
+    createSession();
+  }, []);
+
+  if (session == undefined) {
+    return;
+  }
+
+  return <CodingAgent session={session} onExit={onExit} />;
 };
 
 const renderer = await createCliRenderer();
