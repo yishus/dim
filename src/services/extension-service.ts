@@ -1,5 +1,10 @@
 import { ExtensionLoader, type ExtensionRegistry } from "../extensions";
 import { registerExtensionTools } from "../tools";
+import type {
+  ExtensionSessionEvent,
+  ExtensionSessionEventContext,
+  ExtensionSessionHookResponse,
+} from "../types/extensions";
 
 export class ExtensionService {
   private registry?: ExtensionRegistry;
@@ -29,5 +34,16 @@ export class ExtensionService {
     path: string;
   }> {
     return this.registry?.loadedExtensions ?? [];
+  }
+
+  async runHook<TEvent extends ExtensionSessionEvent>(
+    event: TEvent,
+    context: ExtensionSessionEventContext<TEvent>,
+  ): Promise<Partial<ExtensionSessionHookResponse<TEvent>>> {
+    if (!this.registry) {
+      return {};
+    }
+
+    return this.registry.runHook(event, context);
   }
 }

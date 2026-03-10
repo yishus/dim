@@ -114,8 +114,11 @@ const parseFilePaths = (text: string, baseColor: string): TextSegment[] => {
 const Message = ({ message, index }: Props) => {
   const isUser = message.role === "user";
   const isAgent = message.role === "agent";
+  const isSystem = message.role === "system";
   const baseColor = isUser
     ? THEME.colors.text.primary
+    : isSystem
+      ? THEME.colors.text.highlight
     : THEME.colors.text.secondary;
 
   // Split by lines first, then highlight each line
@@ -128,6 +131,8 @@ const Message = ({ message, index }: Props) => {
       borderColor={
         isUser
           ? THEME.colors.border.focus
+          : isSystem
+            ? THEME.colors.text.muted
           : isAgent
             ? THEME.colors.text.highlight
             : THEME.colors.border.default

@@ -8,6 +8,7 @@ import {
   type AskUserQuestionRequest,
   type ModelId,
   type QuestionAnswer,
+  type UIMessage,
   ALL_MODELS,
   Provider,
 } from "../session";
@@ -39,6 +40,9 @@ const PANEL_TITLES: Record<LeftPanel, string> = {
   reply: "[4] reply",
 };
 
+const formatStepDetail = (text: string) =>
+  text.replace(/\s+/g, " ").trim().slice(0, 20);
+
 const CodingAgent = (props: Props) => {
   const { session, onExit } = props;
 
@@ -66,6 +70,7 @@ const CodingAgent = (props: Props) => {
   const [selectedModel, setSelectedModel] = useState(0);
   const [selectedStep, setSelectedStep] = useState(0);
   const [selectedExtension, setSelectedExtension] = useState(0);
+  const [expandedPromptSteps, setExpandedPromptSteps] = useState<number[]>([]);
   const textareaRef = useRef<TextareaRenderable>(null);
   const [stepsTab, setStepsTab] = useState("steps");
   const [skillsTab, setSkillsTab] = useState("skills");
@@ -95,6 +100,12 @@ const CodingAgent = (props: Props) => {
     () => SyntaxStyle.fromStyles(githubDark),
     [],
   );
+  const stepMessages = useMemo<UIMessage[]>(() => messages, [messages]);
+  const selectedStepMessage = stepMessages[selectedStep];
+  const selectedStepHasPrompt =
+    selectedStepMessage?.role === "user" && "systemPrompt" in selectedStepMessage;
+  const isSelectedStepPromptExpanded =
+    selectedStepHasPrompt && expandedPromptSteps.includes(selectedStep);
   const selectedExtensionSource = useMemo(() => {
     if (!selectedExtensionPath) return null;
     if (!existsSync(selectedExtensionPath)) {
@@ -163,8 +174,21 @@ const CodingAgent = (props: Props) => {
         if (activePanel === "status" && key.name === "m") {
           setShowModelSelector(true);
         }
+
+        if (
+          activePanel === "steps" &&
+          key.name === "p" &&
+          selectedStepMessage?.role === "user" &&
+          "systemPrompt" in selectedStepMessage
+        ) {
+          setExpandedPromptSteps((prev) =>
+            prev.includes(selectedStep)
+              ? prev.filter((index) => index !== selectedStep)
+              : [...prev, selectedStep],
+          );
+        }
       },
-      [activePanel, showModelSelector, selectedModel, modelItems],
+      [activePanel, showModelSelector, selectedModel, modelItems, selectedStep, selectedStepMessage],
     ),
   );
 
@@ -191,13 +215,13 @@ const CodingAgent = (props: Props) => {
   }, []);
 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (stepMessages.length > 0) {
       setSelectedStep((prev) => {
-        const wasAtEnd = prev >= messages.length - 2;
-        return wasAtEnd ? messages.length - 1 : prev;
+        const wasAtEnd = prev >= stepMessages.length - 2;
+        return wasAtEnd ? stepMessages.length - 1 : prev;
       });
     }
-  }, [messages.length]);
+  }, [stepMessages.length]);
 
   useEffect(() => {
     setSelectedExtension((prev) =>
@@ -250,10 +274,6 @@ const CodingAgent = (props: Props) => {
   };
 
   const handleSubmit = (submittedText: string) => {
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { role: "user", text: submittedText },
-    ]);
     setIsLoading(true);
     session.prompt(submittedText);
   };
@@ -319,12 +339,53 @@ const CodingAgent = (props: Props) => {
   );
 
   const renderMessage = () => {
-    const msg = messages[selectedStep];
+    const msg = selectedStepMessage;
     return (
       <scrollbox
         style={{ flexGrow: 1, flexShrink: 1, padding: 1, minWidth: 0 }}
       >
-        {msg ? <MessageList messages={[msg]} /> : null}
+        {msg ? (
+          <box style={{ flexDirection: "column", minWidth: 0 }}>
+            {msg.role === "user" && "systemPrompt" in msg && (
+              <box
+                style={{
+                  flexDirection: "column",
+                  marginBottom: 1,
+                  minWidth: 0,
+                }}
+              >
+                <text fg={THEME.colors.text.muted}>
+                  {isSelectedStepPromptExpanded
+                    ? "p: hide system prompt"
+                    : "p: show system prompt"}
+                </text>
+                {isSelectedStepPromptExpanded && (
+                  msg.systemPrompt ? (
+                    <MessageList
+                      messages={[
+                        {
+                          role: "system",
+                          text: msg.systemPrompt,
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <box
+                      border={["left"]}
+                      borderColor={THEME.colors.text.muted}
+                      style={{ marginTop: 1, paddingLeft: 1 }}
+                    >
+                      <text fg={THEME.colors.text.muted}>
+                        No system prompt for this request.
+                      </text>
+                    </box>
+                  )
+                )}
+              </box>
+            )}
+            <MessageList messages={[msg]} />
+          </box>
+        ) : null}
       </scrollbox>
     );
   };
@@ -443,10 +504,10 @@ const CodingAgent = (props: Props) => {
           >
             {stepsTab == "steps" && (
               <Select
-                items={messages.map((msg, i) => ({
+                items={stepMessages.map((msg, i) => ({
                   key: String(i),
                   label: msg.role,
-                  detail: msg.text.slice(0, 20),
+                  detail: formatStepDetail(msg.text),
                 }))}
                 active={activePanel === "steps"}
                 selectedIndex={selectedStep}

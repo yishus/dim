@@ -34,6 +34,8 @@ export class Agent {
       saveToSessionMemory,
       updateTokenUsage,
     } = options;
+    const systemPrompt =
+      "systemPrompt" in options ? options.systemPrompt : this.systemPrompt;
     if (this.context.length === 0 && this.systemReminderStart) {
       this.context.push({
         role: "user",
@@ -64,7 +66,7 @@ export class Agent {
         const { fullMessage, streamText } = AI.stream(
           this.provider,
           this.context,
-          this.systemPrompt,
+          systemPrompt,
           this.model,
           tools,
           signal,

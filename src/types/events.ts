@@ -2,6 +2,11 @@ export interface MessageStartEvent {
   role: "user" | "assistant";
 }
 
+export interface UserPromptEvent {
+  text: string;
+  systemPrompt?: string;
+}
+
 export interface MessageUpdateEvent {
   text: string;
 }
@@ -17,6 +22,7 @@ export interface TokenUsageUpdateEvent {
 }
 
 export interface SessionEvents {
+  user_prompt: UserPromptEvent;
   message_start: MessageStartEvent;
   message_update: MessageUpdateEvent;
   message_end: void;

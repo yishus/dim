@@ -17,8 +17,7 @@
     "dev": "bun run --watch src/cli.tsx",
     "start": "bun run src/cli.tsx",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
+    "test": "bun test tests",
     "logs:build": "cd web && bun install && bunx @tailwindcss/cli -i src/styles.css -o dist/styles.css && bun build src/cli.tsx --outdir dist",
     "logs": "bun run web/server.ts"
   },

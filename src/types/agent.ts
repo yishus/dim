@@ -10,6 +10,7 @@ export interface MessageEmitEvent {
 
 export interface PromptOptions {
   tools: ToolDefinition[];
+  systemPrompt?: string;
   canUseTool?: (name: string, input: unknown) => Promise<boolean>;
   askUserQuestion?: (input: AskUserQuestionInput) => Promise<QuestionAnswer[]>;
   emitMessage?: (event: MessageEmitEvent) => void;

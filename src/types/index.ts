@@ -41,6 +41,7 @@ export type {
   MessageStartEvent,
   MessageUpdateEvent,
   TokenUsageUpdateEvent,
+  UserPromptEvent,
   SessionEvents,
 } from "./events";
 

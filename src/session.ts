@@ -9,6 +9,7 @@ import {
   type MessageDelta,
   type ModelId,
   type ProviderModel,
+  type PromptOptions,
   type UIMessage,
   type ToolUseRequest,
   type AskUserQuestionRequest,
@@ -161,14 +162,36 @@ export class Session {
   async prompt(input: string) {
     this.logger.info("Session", "Processing prompt", { length: input.length });
 
-    const stream = this.agent.stream(input, {
+    const hookResponse = await this.extensions.runHook("UserPromptSubmit", {
+      input: {
+        model: this.agent.model,
+        provider: this.agent.provider,
+        systemPrompt: this.agent.systemPrompt,
+      },
+    });
+
+    const streamOptions: PromptOptions = {
       tools: getAllToolDefinitions(),
       canUseTool: this.toolService.requestToolApproval.bind(this.toolService),
       askUserQuestion: this.toolService.askUserQuestion.bind(this.toolService),
       emitMessage: this.handleEmitMessage.bind(this),
       saveToSessionMemory: this.fileMemory.save.bind(this.fileMemory),
       updateTokenUsage: this.handleTokenUsage.bind(this),
+    };
+
+    if ("systemPrompt" in hookResponse) {
+      streamOptions.systemPrompt = hookResponse.systemPrompt;
+    }
+
+    this.eventBus.emit("user_prompt", {
+      text: input,
+      systemPrompt:
+        "systemPrompt" in streamOptions
+          ? streamOptions.systemPrompt
+          : this.agent.systemPrompt,
     });
+
+    const stream = this.agent.stream(input, streamOptions);
     try {
       for await (const event of stream) {
         this.processDelta(event);

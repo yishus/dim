@@ -9,6 +9,8 @@ import type {
   AnyExtensionSessionHook,
   ExtensionSessionHook,
   ExtensionSessionEvent,
+  ExtensionSessionEventContext,
+  ExtensionSessionHookResponse,
 } from "./types/extensions";
 
 export interface LoadedExtension {
@@ -58,6 +60,29 @@ export class ExtensionRegistry {
     ExtensionSessionEvent,
     Array<AnyExtensionSessionHook>
   >();
+
+  async runHook<TEvent extends ExtensionSessionEvent>(
+    event: TEvent,
+    context: ExtensionSessionEventContext<TEvent>,
+  ): Promise<Partial<ExtensionSessionHookResponse<TEvent>>> {
+    const handlers = this.hooks.get(event);
+    if (!handlers?.length) {
+      return {};
+    }
+
+    const response: Partial<ExtensionSessionHookResponse<TEvent>> = {};
+
+    for (const handler of handlers) {
+      const result = await (
+        handler as unknown as ExtensionSessionHook<TEvent>
+      )(context);
+      if (result && typeof result === "object") {
+        Object.assign(response, result);
+      }
+    }
+
+    return response;
+  }
 }
 
 export class ExtensionLoader {

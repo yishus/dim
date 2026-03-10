@@ -6,6 +6,7 @@ import type {
   MessageStartEvent,
   MessageUpdateEvent,
   TokenUsageUpdateEvent,
+  UserPromptEvent,
 } from "../types";
 
 export interface TokenUsage {
@@ -24,6 +25,17 @@ export function useSessionEvents(session: Session) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    const onUserPrompt = (event: UserPromptEvent) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          text: event.text,
+          systemPrompt: event.systemPrompt,
+        },
+      ]);
+    };
+
     const onStart = (event: MessageStartEvent) => {
       setMessages((prev) => [...prev, { role: event.role, text: "" }]);
     };
@@ -60,6 +72,7 @@ export function useSessionEvents(session: Session) {
       setIsLoading(false);
     };
 
+    session.eventBus.on("user_prompt", onUserPrompt);
     session.eventBus.on("message_start", onStart);
     session.eventBus.on("message_update", onUpdate);
     session.eventBus.on("token_usage_update", onTokenUsage);
@@ -68,6 +81,7 @@ export function useSessionEvents(session: Session) {
     session.eventBus.on("message_end", onEnd);
 
     return () => {
+      session.eventBus.off("user_prompt", onUserPrompt);
       session.eventBus.off("message_start", onStart);
       session.eventBus.off("message_update", onUpdate);
       session.eventBus.off("token_usage_update", onTokenUsage);

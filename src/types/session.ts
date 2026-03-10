@@ -8,8 +8,9 @@ export interface ProviderModel {
 }
 
 export interface UIMessage {
-  role: "user" | "assistant" | "agent" | "tool";
+  role: "user" | "assistant" | "agent" | "tool" | "system";
   text: string;
+  systemPrompt?: string;
 }
 
 export interface ToolUseRequest {
