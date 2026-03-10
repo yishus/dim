@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { basename, dirname } from "path";
 
 import {
   Session,
@@ -63,6 +64,7 @@ const CodingAgent = (props: Props) => {
   const [activePanel, setActivePanel] = useState<LeftPanel>("reply");
   const [selectedModel, setSelectedModel] = useState(0);
   const [selectedStep, setSelectedStep] = useState(0);
+  const [selectedExtension, setSelectedExtension] = useState(0);
   const textareaRef = useRef<TextareaRenderable>(null);
   const [stepsTab, setStepsTab] = useState("steps");
   const [skillsTab, setSkillsTab] = useState("skills");
@@ -74,6 +76,17 @@ const CodingAgent = (props: Props) => {
         label: `${m.name} (${PROVIDER_DISPLAY_NAMES[m.provider]})`,
       })),
     [],
+  );
+  const extensionItems: SelectItem[] = useMemo(
+    () =>
+      session.extensions.getLoadedExtensions().map((extension) => ({
+        key: extension.path,
+        label: extension.name,
+        detail: extension.path.endsWith("/index.ts")
+          ? basename(dirname(extension.path))
+          : basename(extension.path),
+      })),
+    [session],
   );
 
   useKeyboard(
@@ -165,6 +178,14 @@ const CodingAgent = (props: Props) => {
       });
     }
   }, [messages.length]);
+
+  useEffect(() => {
+    setSelectedExtension((prev) =>
+      extensionItems.length === 0
+        ? 0
+        : Math.min(prev, extensionItems.length - 1),
+    );
+  }, [extensionItems]);
 
   const handleToolUseSelect = (approved: boolean) => {
     pendingApprovalRef.current?.resolve(approved);
@@ -374,8 +395,16 @@ const CodingAgent = (props: Props) => {
             onTabChange={setSkillsTab}
             style={{ minHeight: 10 }}
           >
-            {stepsTab == "skills" && <></>}
-            {stepsTab == "extensions" && <></>}
+            {skillsTab == "skills" && <></>}
+            {skillsTab == "extensions" && (
+              <Select
+                items={extensionItems}
+                active={activePanel === "skills"}
+                selectedIndex={selectedExtension}
+                onSelectedChange={setSelectedExtension}
+                emptyText="No extensions loaded"
+              />
+            )}
           </TabbedPanel>
         </box>
         <box style={{ flexGrow: 1, flexDirection: "column" }}>

@@ -3,24 +3,39 @@ import { join } from "path";
 import { homedir } from "os";
 
 import type {
-  ExtensionToolCallContext,
   ExtensionTool,
   ExtensionCommand,
   ActivateFunction,
+  AnyExtensionSessionHook,
+  ExtensionSessionHook,
+  ExtensionSessionEvent,
 } from "./types/extensions";
 
-export type {
-  ExtensionToolCallContext,
-  ExtensionTool,
-  ExtensionCommand,
-  ActivateFunction,
-};
+export interface LoadedExtension {
+  name: string;
+  path: string;
+}
 
 export class ExtensionAPI {
   private registry: ExtensionRegistry;
 
   constructor(registry: ExtensionRegistry) {
     this.registry = registry;
+  }
+
+  on<TEvent extends ExtensionSessionEvent>(
+    event: TEvent,
+    handler: ExtensionSessionHook<TEvent>,
+  ): void {
+    const handlers = this.registry.hooks.get(event);
+    if (handlers) {
+      handlers.push(handler as unknown as AnyExtensionSessionHook);
+      return;
+    }
+    this.registry.hooks.set(
+      event,
+      [handler as unknown as AnyExtensionSessionHook],
+    );
   }
 
   registerTool(tool: ExtensionTool<any>): void {
@@ -31,23 +46,18 @@ export class ExtensionAPI {
   }
 
   registerCommand(cmd: ExtensionCommand): void {
-    if (!cmd.name.startsWith("/")) {
-      throw new Error(
-        `Extension command name must start with "/", got "${cmd.name}".`,
-      );
-    }
     this.registry.commands.push(cmd);
-  }
-
-  addSystemPrompt(prompt: string): void {
-    this.registry.systemPromptAdditions.push(prompt);
   }
 }
 
 export class ExtensionRegistry {
   tools = new Map<string, ExtensionTool<any>>();
   commands: ExtensionCommand[] = [];
-  systemPromptAdditions: string[] = [];
+  loadedExtensions: LoadedExtension[] = [];
+  hooks = new Map<
+    ExtensionSessionEvent,
+    Array<AnyExtensionSessionHook>
+  >();
 }
 
 export class ExtensionLoader {
@@ -61,32 +71,42 @@ export class ExtensionLoader {
     for (const dir of dirs) {
       if (!existsSync(dir)) continue;
 
-      let entries: string[];
+      let entries;
       try {
-        entries = readdirSync(dir, { withFileTypes: true })
-          .filter((d) => d.isDirectory())
-          .map((d) => d.name);
+        entries = readdirSync(dir, { withFileTypes: true });
       } catch {
         continue;
       }
 
       for (const entry of entries) {
-        const indexPath = join(dir, entry, "index.ts");
-        if (!existsSync(indexPath)) continue;
+        const extensionPath = entry.isDirectory()
+          ? join(dir, entry.name, "index.ts")
+          : entry.isFile() && entry.name.endsWith(".ts")
+            ? join(dir, entry.name)
+            : undefined;
+        if (!extensionPath || !existsSync(extensionPath)) continue;
+
+        const extensionName = entry.isDirectory()
+          ? entry.name
+          : entry.name.slice(0, -3);
 
         try {
-          const mod = await import(indexPath);
+          const mod = await import(extensionPath);
           const activate: ActivateFunction = mod.default;
           if (typeof activate !== "function") {
             console.warn(
-              `Extension "${entry}" does not export a default activate function, skipping.`,
+              `Extension "${extensionName}" does not export a default activate function, skipping.`,
             );
             continue;
           }
           const api = new ExtensionAPI(registry);
           await activate(api);
+          registry.loadedExtensions.push({
+            name: extensionName,
+            path: extensionPath,
+          });
         } catch (err) {
-          console.warn(`Failed to load extension "${entry}":`, err);
+          console.warn(`Failed to load extension "${extensionName}":`, err);
         }
       }
     }

@@ -26,3 +26,45 @@ export interface ExtensionCommand {
 }
 
 export type ActivateFunction = (api: ExtensionAPI) => void | Promise<void>;
+
+export interface ExtensionSessionEventMap {
+  UserPromptSubmit: {
+    context: {
+      input: UserPromptSubmitEventInput;
+    };
+    response: UserPromptSubmitHookResponse;
+  };
+}
+
+export type ExtensionSessionEvent = keyof ExtensionSessionEventMap;
+
+export type ExtensionSessionHookResponse<
+  TEvent extends ExtensionSessionEvent = ExtensionSessionEvent,
+> = ExtensionSessionEventMap[TEvent]["response"];
+
+export interface UserPromptSubmitHookResponse {
+  systemPrompt?: string;
+}
+
+export type ExtensionSessionEventContext<
+  TEvent extends ExtensionSessionEvent = ExtensionSessionEvent,
+> = ExtensionSessionEventMap[TEvent]["context"];
+
+export type ExtensionSessionHook<
+  TEvent extends ExtensionSessionEvent = ExtensionSessionEvent,
+> = (
+  ctx: ExtensionSessionEventContext<TEvent>,
+) => void | Promise<ExtensionSessionHookResponse<TEvent> | void>;
+
+export type AnyExtensionSessionHook = {
+  [TEvent in ExtensionSessionEvent]: ExtensionSessionHook<TEvent>;
+}[ExtensionSessionEvent];
+
+export interface BaseEventInput {
+  model: ModelId;
+  provider: Provider;
+}
+
+export type UserPromptSubmitEventInput = BaseEventInput & {
+  systemPrompt?: string;
+};

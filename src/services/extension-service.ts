@@ -9,10 +9,6 @@ export class ExtensionService {
     registerExtensionTools(this.registry);
   }
 
-  getSystemPromptAdditions(): string[] {
-    return this.registry?.systemPromptAdditions ?? [];
-  }
-
   getCommands(): Array<{
     name: string;
     description: string;
@@ -26,5 +22,12 @@ export class ExtensionService {
       value: cmd.name.slice(1),
       execute: cmd.execute,
     }));
+  }
+
+  getLoadedExtensions(): Array<{
+    name: string;
+    path: string;
+  }> {
+    return this.registry?.loadedExtensions ?? [];
   }
 }

@@ -75,7 +75,7 @@ const Select = ({
   }, [selectedIndex]);
 
   return (
-    <scrollbox ref={scrollRef}>
+    <scrollbox ref={scrollRef} style={{ flexGrow: 1, minHeight: 0 }}>
       {items.map((item, i) => {
         const isHighlighted =
           active && i === selectedIndex;

@@ -143,18 +143,11 @@ export class Session {
       .replace("$gitStatus", recentCommits)
       .replace("$recentCommits", gitStatus);
 
-    // Append extension system prompt additions
-    const extensionPrompts = session.extensions.getSystemPromptAdditions();
-    let finalSystemPrompt = systemPrompt;
-    if (extensionPrompts.length > 0) {
-      finalSystemPrompt = `${systemPrompt}\n\n${extensionPrompts.join("\n\n")}`;
-    }
-
     session.agent = new Agent(
       session.model,
       session.provider,
       session.sessionManager,
-      finalSystemPrompt,
+      systemPrompt,
       systemReminderStart,
     );
 
