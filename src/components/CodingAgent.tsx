@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { existsSync, readFileSync } from "fs";
 import { basename, dirname } from "path";
 
 import {
@@ -11,7 +12,7 @@ import {
   Provider,
 } from "../session";
 import { PROVIDER_DISPLAY_NAMES } from "../providers";
-import { TextareaRenderable } from "@opentui/core";
+import { SyntaxStyle, TextareaRenderable } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import MessageList from "./MessageList";
 import ToolUseRequestDialog from "./ToolUseRequestDialog";
@@ -22,7 +23,7 @@ import type { SelectItem } from "./Select";
 import type { AskUserQuestionInput } from "../tools";
 import LoadingIndicator from "./LoadingIndicator";
 import { useSessionEvents } from "../hooks/useSessionEvents";
-import { THEME } from "../theme";
+import { githubDark, THEME } from "../theme";
 
 interface Props {
   session: Session;
@@ -88,6 +89,25 @@ const CodingAgent = (props: Props) => {
       })),
     [session],
   );
+  const selectedExtensionItem = extensionItems[selectedExtension];
+  const selectedExtensionPath = selectedExtensionItem?.key;
+  const codeSyntaxStyle = useMemo(
+    () => SyntaxStyle.fromStyles(githubDark),
+    [],
+  );
+  const selectedExtensionSource = useMemo(() => {
+    if (!selectedExtensionPath) return null;
+    if (!existsSync(selectedExtensionPath)) {
+      return `Extension file not found:\n${selectedExtensionPath}`;
+    }
+
+    try {
+      return readFileSync(selectedExtensionPath, "utf8");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return `Failed to read extension source:\n${selectedExtensionPath}\n\n${message}`;
+    }
+  }, [selectedExtensionPath]);
 
   useKeyboard(
     useCallback(
@@ -309,9 +329,35 @@ const CodingAgent = (props: Props) => {
     );
   };
 
+  const renderExtensionPreview = () => (
+    <scrollbox
+      style={{ flexGrow: 1, flexShrink: 1, padding: 1, minWidth: 0 }}
+    >
+      {selectedExtensionPath ? (
+        <box style={{ flexDirection: "column", minWidth: 0 }}>
+          <text fg={THEME.colors.text.muted}>{selectedExtensionPath}</text>
+          <code
+            content={selectedExtensionSource ?? ""}
+            filetype="typescript"
+            syntaxStyle={codeSyntaxStyle}
+          />
+        </box>
+      ) : (
+        <text fg={THEME.colors.text.muted}>No extension selected</text>
+      )}
+    </scrollbox>
+  );
+
   const currentModelName =
     ALL_MODELS.find((m) => m.id === currentModel)?.name ?? "Unknown";
   const currentProviderName = PROVIDER_DISPLAY_NAMES[currentProvider];
+  const isShowingExtensionPreview =
+    activePanel === "skills" && skillsTab === "extensions";
+  const rightPanelTitle = isShowingExtensionPreview
+    ? selectedExtensionItem?.label
+      ? `extension: ${selectedExtensionItem.label}`
+      : "extension"
+    : "conversation";
 
   return (
     <box
@@ -445,10 +491,14 @@ const CodingAgent = (props: Props) => {
           <box
             border={true}
             borderStyle="rounded"
-            title="conversation"
+            title={rightPanelTitle}
             style={{ flexGrow: 1, flexDirection: "column", minHeight: 0 }}
           >
-            {activePanel === "steps" ? renderMessage() : renderConversation()}
+            {activePanel === "steps"
+              ? renderMessage()
+              : isShowingExtensionPreview
+                ? renderExtensionPreview()
+                : renderConversation()}
           </box>
           <box
             border={true}
