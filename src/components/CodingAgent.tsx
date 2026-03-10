@@ -251,7 +251,15 @@ const CodingAgent = (props: Props) => {
   );
 
   const renderConversation = () => (
-    <box style={{ flexGrow: 1, flexDirection: "column", minHeight: 0 }}>
+    <box
+      style={{
+        flexGrow: 1,
+        flexShrink: 1,
+        flexDirection: "column",
+        minWidth: 0,
+        minHeight: 0,
+      }}
+    >
       {messages.length === 0 ? (
         <box
           style={{
@@ -265,7 +273,7 @@ const CodingAgent = (props: Props) => {
         </box>
       ) : (
         <scrollbox
-          style={{ flexGrow: 1, padding: 1 }}
+          style={{ flexGrow: 1, flexShrink: 1, padding: 1, minWidth: 0 }}
           stickyScroll={true}
           stickyStart="bottom"
         >
@@ -293,7 +301,9 @@ const CodingAgent = (props: Props) => {
   const renderMessage = () => {
     const msg = messages[selectedStep];
     return (
-      <scrollbox style={{ flexGrow: 1, padding: 1 }}>
+      <scrollbox
+        style={{ flexGrow: 1, flexShrink: 1, padding: 1, minWidth: 0 }}
+      >
         {msg ? <MessageList messages={[msg]} /> : null}
       </scrollbox>
     );
@@ -304,9 +314,25 @@ const CodingAgent = (props: Props) => {
   const currentProviderName = PROVIDER_DISPLAY_NAMES[currentProvider];
 
   return (
-    <box style={{ flexDirection: "column" }} position="relative">
-      <box style={{ flexDirection: "row", flexGrow: 1 }}>
-        <box style={{ width: "30%", flexDirection: "column" }}>
+    <box
+      width="100%"
+      height="100%"
+      style={{ flexDirection: "column" }}
+      position="relative"
+    >
+      <box
+        width="100%"
+        height="100%"
+        style={{ flexDirection: "row", flexGrow: 1, minHeight: 0 }}
+      >
+        <box
+          style={{
+            width: "30%",
+            flexDirection: "column",
+            flexShrink: 0,
+            minHeight: 0,
+          }}
+        >
           <box
             border={true}
             borderStyle="rounded"
@@ -407,7 +433,15 @@ const CodingAgent = (props: Props) => {
             )}
           </TabbedPanel>
         </box>
-        <box style={{ flexGrow: 1, flexDirection: "column" }}>
+        <box
+          style={{
+            flexGrow: 1,
+            flexShrink: 1,
+            flexDirection: "column",
+            minWidth: 0,
+            minHeight: 0,
+          }}
+        >
           <box
             border={true}
             borderStyle="rounded"
